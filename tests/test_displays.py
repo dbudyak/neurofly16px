@@ -83,3 +83,10 @@ def test_worker_survives_a_failing_display() -> None:
     w.show(new_frame())
     w.close()
     assert w.frames_shown == 0 and broken.closed
+
+
+def test_worker_exposes_the_wrapped_display() -> None:
+    inner = SlowDisplay()
+    inner.gate.set()
+    w = DisplayWorker(inner)
+    assert w.display is inner

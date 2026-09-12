@@ -23,6 +23,11 @@ class DisplayWorker:
         self.frames_shown = 0
         self.frames_dropped = 0
 
+    @property
+    def display(self) -> Display:
+        """The wrapped display, so callers can read its own counters."""
+        return self._display
+
     def start(self) -> None:
         self._thread.start()
 

@@ -144,4 +144,21 @@ def main(argv: list[str] | None = None) -> int:
         log.info("interrupted")
         return 0
     log.info("stats: %s", stats)
+    log.info(
+        "display: %d shown, %d dropped by the worker%s",
+        display.frames_shown,
+        display.frames_dropped,
+        _device_counters(display.display),
+    )
     return 0
+
+
+def _device_counters(device: object) -> str:
+    """Frames the device itself accepted, when it keeps count (the Ditoo does)."""
+    sent = getattr(device, "frames_sent", None)
+    if sent is None:
+        return ""
+    return (
+        f"; device accepted {sent}, dropped {getattr(device, 'frames_dropped', 0)}"
+        f", reconnects {getattr(device, 'reconnects', 0)}"
+    )
