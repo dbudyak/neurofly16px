@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neurofly16px"
+version = "0.0.1"
+description = "A physically simulated fruit fly on a 16x16 LED display, reacting to sound."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy==1.26.4",
+    "flybody",
+]
+
+[project.optional-dependencies]
+audio = ["sounddevice>=0.4.7"]
+brain = ["torch>=2.4", "pyarrow>=17", "polars>=1.0"]
+viewer = ["websockets>=13"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+neurofly = "neurofly16px.cli:main"
+
+[tool.uv.sources]
+flybody = { git = "https://github.com/TuragaLab/flybody.git", rev = "d015e9bfe441bd90ae431bac24c55cb74bdbce26" }
+
+[tool.setuptools.packages.find]
+include = ["neurofly16px*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "flybody: needs the flybody stack (skipped when not importable)",
+    "policy: needs data/policy_walking.npz",
+    "hardware: needs the Ditoo",
+]
