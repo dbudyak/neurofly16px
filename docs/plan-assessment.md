@@ -81,6 +81,9 @@ The revised `PLAN.md` incorporates every decision below.
    drawn, no displacement) layered over the walking sim, plus a physical turn
    burst. The flight policy and `wing_pattern_fmech.npy` stay documented for
    a later offline "record a takeoff clip and replay it" option.
+   **2026-09-13:** the owner asked for that option to be planned; it is now
+   `docs/plans/2026-09-13-phase7-flight.md` (Phase 7). The hop in place stays
+   until that phase runs.
 
 7. **Ditoo image command.** Pixoo / Timebox Evo / Ditoo Mic accept `0x44`
    (single image) and `0x49` (animation); Ditoo Pro uses `0x8b`. The original

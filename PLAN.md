@@ -14,9 +14,10 @@ phases:
 - `docs/plans/2026-09-12-phase1-skeleton.md`
 - `docs/plans/2026-09-12-phase2-flybody-sim.md`
 - `docs/plans/2026-09-12-phase3-render-and-ditoo.md`
+- `docs/plans/2026-09-13-phase4-audio-behavior.md`
+- `docs/plans/2026-09-13-phase7-flight.md` (planned, not started)
 
-Phases 4–6 get their executable plans once Phase 3 has produced the numbers
-they depend on (frame rate, control steps per second, RFCOMM behaviour).
+Phases 5 and 6 get their executable plans when they are reached.
 
 Guiding rules (unchanged):
 
@@ -204,7 +205,8 @@ real time.
    number goes into `docs/flybody.md`. If below 500/s: first try
    `physics.model.opt.iterations` and contact `solimp/solref` from the task
    defaults, else accept slow motion (the loop already handles it).
-5. Flight physics: not in the loop (see `docs/plan-assessment.md` #6).
+5. Flight physics: not in the loop (see `docs/plan-assessment.md` #6). Phase 7
+   revisits this with recorded clips.
 
 Done when: `--sim flybody --device terminal` walks straight, turns left and
 right and stops on scripted commands, with the measured real-time ratio
@@ -404,13 +406,28 @@ sanity test passes.
 
 ---
 
+---
+
+## Phase 7 — Flight across the panel
+
+Goal: a startle takes the fly off the floor, across the panel and back down,
+using flybody's real flight dynamics recorded offline and replayed live —
+live flight needs 5,000 policy calls and 20,000 physics steps per second
+against the 236 control steps/s this host manages.
+
+Planned in `docs/plans/2026-09-13-phase7-flight.md`; independent of Phases 4–6,
+needs Phases 2 and 3. Until then `mode="fly"` is a jump in place.
+
+---
+
 ## Non-goals (for now)
 
 - Vision-guided tasks, terrain, multiple flies.
 - The Ditoo's own microphone, buttons or speaker; any Wi-Fi / cloud API.
 - Faithful 3-D rendering.
 - Motor-neuron-level control of the body.
-- Flight physics in the live loop.
+- Flight physics *solved* in the live loop (Phase 7 replays recorded clips
+  instead).
 
 ## Open questions (HOST only)
 
