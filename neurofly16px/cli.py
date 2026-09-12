@@ -16,13 +16,14 @@ from neurofly16px.device.ppm import PpmDisplay
 from neurofly16px.device.terminal import TerminalDisplay
 from neurofly16px.device.worker import DisplayWorker
 from neurofly16px.render.sprite import SpriteRenderer
+from neurofly16px.sim.base import FlySim
 from neurofly16px.sim.stub import StubSim
 
 log = logging.getLogger(__name__)
 
 AUDIO = ("stub",)
 BEHAVIOR = ("scripted",)
-SIM = ("stub",)
+SIM = ("stub", "flybody")
 DEVICE = ("terminal", "ppm")
 
 
@@ -34,6 +35,9 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--behavior", choices=BEHAVIOR, default="scripted")
     r.add_argument("--sim", choices=SIM, default="stub")
     r.add_argument("--device", choices=DEVICE, default="terminal")
+    r.add_argument(
+        "--policy", default=None, help="policy npz (default: config flybody.policy_path)"
+    )
     r.add_argument("--config", type=Path, default=None)
     r.add_argument("--fps", type=float, default=None)
     r.add_argument("--seconds", type=float, default=None)
@@ -44,10 +48,22 @@ def build_parser() -> argparse.ArgumentParser:
 
 def build_stages(
     args: argparse.Namespace, cfg: Config
-) -> tuple[StubAudio, ScriptedBehavior, StubSim, SpriteRenderer, DisplayWorker]:
+) -> tuple[StubAudio, ScriptedBehavior, FlySim, SpriteRenderer, DisplayWorker]:
     audio = StubAudio(None)
     behavior = ScriptedBehavior()
-    sim = StubSim(cfg.stub_sim, cfg.hop)
+    sim: FlySim
+    if args.sim == "flybody":
+        # imported lazily so `--sim stub` never pulls in MuJoCo
+        from neurofly16px.sim.flybody_sim import FlybodySim
+
+        fb = (
+            cfg.flybody
+            if args.policy is None
+            else dataclasses.replace(cfg.flybody, policy_path=args.policy)
+        )
+        sim = FlybodySim(fb, cfg.hop)
+    else:
+        sim = StubSim(cfg.stub_sim, cfg.hop)
     renderer = SpriteRenderer(cfg.render)
     display: DisplayWorker
     if args.device == "terminal":

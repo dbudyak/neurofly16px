@@ -55,7 +55,7 @@ Each stage is a separate module with a plain dataclass interface, so any stage c
 
 ## Status
 
-Phase 0 and Phase 1 done.
+Phases 0–2 done.
 
 - **Phase 0** (host verification): both `uv` environments exist, the pretrained
   walking policy is exported to numpy and reproduces TensorFlow to 3e-6, the fly
@@ -69,6 +69,15 @@ Phase 0 and Phase 1 done.
 
   shows the sprite walking, turning and hopping in the terminal (500 sim
   steps/s, 50 Hz behaviour, 8 fps display, no dropped steps).
+- **Phase 2** (real simulation): `--sim flybody` runs the MuJoCo fly under the
+  pretrained walking policy, steered by a leashed "ghost" reference —
+
+      MUJOCO_GL=egl uv run neurofly run --sim flybody --seconds 20
+
+  walks, turns both ways, stands still and hops on the scripted commands.
+  It runs at ≈0.47× real time on this host (i5-9600K), i.e. in slow motion;
+  the loop drops the backlog instead of accumulating lag. Profiling and the
+  one upstream inefficiency worth fixing are in `docs/flybody.md`.
 
 [PLAN.md](PLAN.md) is the roadmap; `docs/plan-assessment.md` lists the decisions
 taken and the ones awaiting the owner; `docs/plans/` holds the executable plans

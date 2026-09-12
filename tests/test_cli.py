@@ -13,3 +13,39 @@ def test_run_with_stubs_to_ppm(tmp_path: Path) -> None:
 
 def test_unknown_sim_is_rejected() -> None:
     assert main(["run", "--sim", "nope"]) == 2
+
+
+import pytest  # noqa: E402
+
+from neurofly16px.cli import build_parser  # noqa: E402
+
+
+def test_sim_flybody_is_a_choice() -> None:
+    args = build_parser().parse_args(["run", "--sim", "flybody", "--policy", "x.npz"])
+    assert args.sim == "flybody" and args.policy == "x.npz"
+
+
+@pytest.mark.flybody
+@pytest.mark.policy
+def test_run_flybody_briefly(tmp_path: Path) -> None:
+    pytest.importorskip("flybody")
+    if not Path("data/policy_walking.npz").exists():
+        pytest.skip("no policy")
+    assert (
+        main(
+            [
+                "run",
+                "--sim",
+                "flybody",
+                "--device",
+                "ppm",
+                "--frames-dir",
+                str(tmp_path),
+                "--seconds",
+                "1",
+                "--fps",
+                "4",
+            ]
+        )
+        == 0
+    )
