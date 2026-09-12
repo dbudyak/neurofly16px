@@ -43,6 +43,53 @@ class RenderConfig:
 
 
 @dataclass(frozen=True)
+class AudioConfig:
+    device: str = ""
+    """Capture device: a PipeWire node name (`pactl list short sources`), or empty for the default.
+
+    The host's default source captures nothing, so the working node is named in
+    `neurofly.example.toml`; see docs/setup.md.
+    """
+    samplerate: int = 16000
+    block_ms: int = 20
+    channels: int = 2
+    noise_tau_s: float = 10.0
+    """Rise time of the background-noise tracker; it falls towards quiet in ~0.2 s."""
+    noise_margin: float = 1.5
+    """How far above the tracked noise floor a block must be to count at all."""
+    loud_rms: float = 0.05
+    """Raw RMS that maps to loudness 1.0. Measured: ambient 0.003, speech ~0.03 (docs/setup.md)."""
+    rms_floor: float = 1e-4
+    """Lower bound on the noise estimate, so digital silence cannot divide by zero."""
+    onset_k: float = 3.0
+    """A block is an onset when its RMS exceeds k times the running median."""
+    median_window_s: float = 1.0
+
+
+@dataclass(frozen=True)
+class FsmConfig:
+    t_walk: float = 0.15
+    """rms above which the fly starts walking."""
+    t_idle: float = 0.08
+    t_startle: float = 0.45
+    walk_dwell_s: float = 0.3
+    idle_dwell_s: float = 2.0
+    startle_s: float = 0.8
+    charge_s: float = 1.0
+    startle_cooldown_s: float = 3.0
+    walk_forward: float = 0.6
+    charge_forward: float = 1.0
+    k_dir: float = 0.8
+    """Gain from sin(direction) to turn while walking."""
+    idle_turn_min_s: float = 3.0
+    idle_turn_max_s: float = 8.0
+    idle_turn_s: float = 0.5
+    idle_turn_amount: float = 0.4
+    drift_turn_amount: float = 0.15
+    """Random heading drift while walking without a direction estimate."""
+
+
+@dataclass(frozen=True)
 class DitooConfig:
     mac: str = ""
     channel: int = 0
@@ -64,6 +111,8 @@ class FlybodyConfig:
 @dataclass(frozen=True)
 class Config:
     loop: LoopConfig = field(default_factory=LoopConfig)
+    audio: AudioConfig = field(default_factory=AudioConfig)
+    fsm: FsmConfig = field(default_factory=FsmConfig)
     stub_sim: StubSimConfig = field(default_factory=StubSimConfig)
     hop: HopConfig = field(default_factory=HopConfig)
     render: RenderConfig = field(default_factory=RenderConfig)
