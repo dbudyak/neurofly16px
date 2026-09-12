@@ -179,3 +179,23 @@ synthesising a reference.
    Python 3.10 env and the fly walks along the default 2 cm/s reference.
 3. Weight export to `.npz` and numpy policy equality (max abs diff < 1e-4).
 4. Control steps per second with the numpy policy (target ≥ 500/s).
+
+## Host results (2026-09-12, dbpc, i5-9600K)
+
+1. ✅ `walk_imitation(terminal_com_dist=inf)` builds under the runtime env
+   (Python 3.12, mujoco 3.13.0, numpy 1.26.4): 12 `walker/*` observables,
+   action spec `(59,)`, control step 0.002 s, physics step 0.0002 s, 100
+   random steps fine.
+2. ✅ TF smoke test (`scripts/smoke_flybody.py`, `.venv-tf`, TF 2.8.0 /
+   tfp 0.16.0 / Python 3.10): the policy loads as a plain
+   `tf.saved_model.load(dir)` callable taking the batched observation dict and
+   returning a distribution; `dist.mean()[0]` is the canonical action.
+   500 control steps on the default 2 cm/s reference reach
+   **x = +2.030 cm after 1.00 s** (y stays within ±0.01, yaw within ±0.03,
+   z 0.132–0.143), i.e. the reference speed is tracked without lag.
+   Throughput **115 control steps/s** including the TF policy (0.23× real
+   time) — TF on CPU is the bottleneck, which is why the policy is ported to
+   numpy.
+   Both `IPython` and `matplotlib` are needed at import time
+   (`flybody/utils.py`) even with `--no-deps`; they are installed in
+   `.venv-tf`.
