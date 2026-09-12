@@ -71,4 +71,6 @@ class FeatureExtractor:
         left = float(np.sqrt(np.mean(np.square(samples[:, 0]))))
         right = float(np.sqrt(np.mean(np.square(samples[:, 1]))))
         balance = (right - left) / (right + left + _EPS)
+        if abs(balance) < self._cfg.direction_min_balance:
+            return None  # coincident capsules or a centred source: no usable bearing
         return float(math.asin(max(-1.0, min(1.0, balance))))

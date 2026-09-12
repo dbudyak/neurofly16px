@@ -123,3 +123,24 @@ Watch the features live while talking and clapping:
 In the quiet room the normalised loudness reads 0.01–0.05, below the FSM's
 `t_idle` 0.08, so the fly stands still; an 8-second `--audio mic --behavior fsm`
 run confirmed it stays in place with the live microphone.
+
+### Live check, 2026-09-13 (80 s, mic + FSM + flybody + Ditoo)
+
+Four claps produced four clean `idle -> startle -> walk -> idle` cycles: a hop
+with wings for 0.8 s, a 1 s charge forward, then back to standing when the room
+went quiet again. Clap loudness reached 0.60, 0.71, 1.00, 1.00 on the
+normalised scale, well above `t_startle` 0.45; the quiet room sat at 0.00–0.05,
+below `t_idle` 0.08, so the fly stood still between them.
+
+Two findings:
+
+- **No usable direction from this microphone.** Even for claps from one side
+  the two channels differed by under 1 % (`direction` read −0.01 to −0.00), so
+  the azimuth was noise. `direction` is now reported as `None` below
+  `audio.direction_min_balance` (5 %), which makes the FSM pick a random
+  startle side instead of always the same one. A real bearing needs two spaced
+  microphones.
+- **Speech did not reach the walk threshold in that session** — no
+  `idle -> walk` transition fired from loudness alone. It is not yet clear
+  whether that is the threshold or simply what was in the room; re-run
+  `scripts/audio_probe.py` while talking to decide before changing `t_walk`.

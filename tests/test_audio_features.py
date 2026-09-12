@@ -65,7 +65,7 @@ def test_onset_fires_once_on_a_step() -> None:
 
 def test_direction_sign_and_mono() -> None:
     fx = FeatureExtractor(CFG)
-    assert fx.push(tone(0.2, balance=1.0), t=0.0).direction == 0.0
+    assert fx.push(tone(0.2, balance=1.0), t=0.0).direction is None  # centred: no bearing
     right = fx.push(tone(0.2, balance=4.0), t=0.02).direction
     left = fx.push(tone(0.2, balance=0.25), t=0.04).direction
     assert right is not None and left is not None
@@ -79,3 +79,10 @@ def test_one_dimensional_block_is_accepted() -> None:
     fx = FeatureExtractor(AudioConfig(channels=1))
     f = fx.push(np.zeros(BLOCK, np.float32), t=0.0)
     assert f.direction is None and f.rms == 0.0
+
+
+def test_tiny_channel_difference_is_not_a_bearing() -> None:
+    """The host microphone's channels differ by <= 1 %; that is noise, not azimuth."""
+    fx = FeatureExtractor(CFG)
+    assert fx.push(tone(0.2, balance=1.01), t=0.0).direction is None
+    assert fx.push(tone(0.2, balance=1.2), t=0.02).direction is not None

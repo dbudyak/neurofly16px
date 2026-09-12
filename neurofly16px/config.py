@@ -64,6 +64,12 @@ class AudioConfig:
     onset_k: float = 3.0
     """A block is an onset when its RMS exceeds k times the running median."""
     median_window_s: float = 1.0
+    direction_min_balance: float = 0.05
+    """Below this inter-channel level difference the bearing is noise, so it is reported as None.
+
+    Measured: the M-Audio Uber Mic's two channels differ by <= 0.01 even for a
+    clap from one side, i.e. it gives no usable azimuth (docs/setup.md).
+    """
 
 
 @dataclass(frozen=True)
