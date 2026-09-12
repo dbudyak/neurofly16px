@@ -17,3 +17,16 @@ policy_path = "data/policy_walking.npz"
 v_max_cm_s = 2.0
 w_max_rad_s = 2.0
 leash_cm = 0.15
+
+[audio]
+# `pactl list short sources`; empty means the PipeWire default source, which on
+# this host captures nothing -- name the real microphone node.
+device = "alsa_input.usb-M-Audio_M-Audio_Uber_Mic-01.analog-stereo"
+samplerate = 16000
+block_ms = 20
+channels = 2
+
+[fsm]
+t_walk = 0.15
+t_idle = 0.08
+t_startle = 0.45

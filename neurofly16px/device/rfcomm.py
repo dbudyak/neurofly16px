@@ -57,9 +57,7 @@ def connect_rfcomm(mac: str, channel: int = 1, timeout: float | None = 10.0) -> 
     return sock
 
 
-_SERIAL_PORT_RECORD = re.compile(
-    r'Service Name: Serial Port(.*?)(?=\nService Name:|\Z)', re.DOTALL
-)
+_SERIAL_PORT_RECORD = re.compile(r"Service Name: Serial Port(.*?)(?=\nService Name:|\Z)", re.DOTALL)
 _CHANNEL = re.compile(r"Channel: (\d+)")
 
 

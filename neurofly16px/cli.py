@@ -9,7 +9,10 @@ import sys
 from pathlib import Path
 
 from neurofly16px import loop
+from neurofly16px.audio.base import AudioSource
 from neurofly16px.audio.stub import StubAudio
+from neurofly16px.behavior.base import Behavior
+from neurofly16px.behavior.fsm import FsmBehavior
 from neurofly16px.behavior.scripted import ScriptedBehavior
 from neurofly16px.config import Config, load_config
 from neurofly16px.device.ppm import PpmDisplay
@@ -21,8 +24,8 @@ from neurofly16px.sim.stub import StubSim
 
 log = logging.getLogger(__name__)
 
-AUDIO = ("stub",)
-BEHAVIOR = ("scripted",)
+AUDIO = ("stub", "mic", "pipewire", "portaudio")
+BEHAVIOR = ("scripted", "fsm")
 SIM = ("stub", "flybody")
 DEVICE = ("terminal", "ppm", "ditoo")
 
@@ -38,6 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument(
         "--policy", default=None, help="policy npz (default: config flybody.policy_path)"
     )
+    r.add_argument("--audio-device", default=None, help="input device name or index")
     r.add_argument("--config", type=Path, default=None)
     r.add_argument("--fps", type=float, default=None)
     r.add_argument("--seconds", type=float, default=None)
@@ -48,11 +52,32 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def build_mic(args: argparse.Namespace, cfg: Config) -> AudioSource:
+    """PipeWire capture where available, PortAudio (sounddevice) otherwise."""
+    device = args.audio_device or cfg.audio.device or None
+    use_pipewire = args.audio == "pipewire" or (args.audio == "mic" and _pipewire_available())
+    if use_pipewire:
+        from neurofly16px.audio.pipewire import PipeWireAudio
+
+        return PipeWireAudio(cfg.audio, device=device)
+    from neurofly16px.audio.mic import MicAudio
+
+    if isinstance(device, str) and device.isdigit():
+        return MicAudio(cfg.audio, device=int(device))
+    return MicAudio(cfg.audio, device=device)
+
+
+def _pipewire_available() -> bool:
+    from neurofly16px.audio.pipewire import PipeWireAudio
+
+    return PipeWireAudio.available()
+
+
 def build_stages(
     args: argparse.Namespace, cfg: Config
-) -> tuple[StubAudio, ScriptedBehavior, FlySim, SpriteRenderer, DisplayWorker]:
-    audio = StubAudio(None)
-    behavior = ScriptedBehavior()
+) -> tuple[AudioSource, Behavior, FlySim, SpriteRenderer, DisplayWorker]:
+    audio: AudioSource = StubAudio(None) if args.audio == "stub" else build_mic(args, cfg)
+    behavior: Behavior = FsmBehavior(cfg.fsm) if args.behavior == "fsm" else ScriptedBehavior()
     sim: FlySim
     if args.sim == "flybody":
         # imported lazily so `--sim stub` never pulls in MuJoCo

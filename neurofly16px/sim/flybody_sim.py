@@ -41,6 +41,7 @@ class FastFruitFly(fruitfly.FruitFly):
                 ctrl[self._ctrl_indices[key]] = action[indices]
         physics.set_control(ctrl)
 
+
 LEG_SENSORS = tuple(f"walker/touch_claw_{leg}" for leg in LEG_NAMES)
 VELOCIMETER = "walker/velocimeter"
 CONTROL_DT = 0.002
