@@ -6,9 +6,7 @@ import dataclasses
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, TypeVar
-
-T = TypeVar("T")
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -67,8 +65,11 @@ class Config:
     flybody: FlybodyConfig = field(default_factory=FlybodyConfig)
 
 
-def from_dict(cls: type[T], data: dict[str, Any]) -> T:
-    """Build a (nested) dataclass from a dict; unknown keys are errors, missing keys use defaults."""
+def from_dict[T](cls: type[T], data: dict[str, Any]) -> T:
+    """Build a (nested) dataclass from a dict.
+
+    Unknown keys are errors; missing keys keep their defaults.
+    """
     fields = {f.name: f for f in dataclasses.fields(cls)}
     unknown = set(data) - set(fields)
     if unknown:
