@@ -1,7 +1,7 @@
 # neurofly16px
 
 A physically simulated fruit fly living on a 16×16 LED display, reacting to sound.
-![neurofly](https://github.com/dbudyak/neurofly16px/repository/blob/main/logo.png)
+![neurofly](https://raw.githubusercontent.com/dbudyak/neurofly16px/refs/heads/main/logo.png)
 
 ## Motivation
 
