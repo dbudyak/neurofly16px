@@ -55,7 +55,24 @@ Each stage is a separate module with a plain dataclass interface, so any stage c
 
 ## Status
 
-Planning done, nothing built yet. [PLAN.md](PLAN.md) is the roadmap with every assumption verified against the sources; `docs/plan-assessment.md` lists the decisions taken and the ones awaiting the owner; `docs/flybody.md`, `docs/ditoo-protocol.md` and `docs/banc.md` hold the verified facts; `docs/plans/` holds the executable plans for Phases 0–3. [CLAUDE.md](CLAUDE.md) has the working conventions.
+Phase 0 and Phase 1 done.
+
+- **Phase 0** (host verification): both `uv` environments exist, the pretrained
+  walking policy is exported to numpy and reproduces TensorFlow to 3e-6, the fly
+  walks headless at 2 cm/s, and a checkerboard reached the real Ditoo over
+  RFCOMM. Numbers and corrections in `docs/setup.md`, `docs/flybody.md`,
+  `docs/ditoo-protocol.md`, `docs/host-bluetooth.md`.
+- **Phase 1** (skeleton): the whole pipeline runs end-to-end with stubs at the
+  real rates —
+
+      uv run neurofly run --audio stub --behavior scripted --sim stub --device terminal
+
+  shows the sprite walking, turning and hopping in the terminal (500 sim
+  steps/s, 50 Hz behaviour, 8 fps display, no dropped steps).
+
+[PLAN.md](PLAN.md) is the roadmap; `docs/plan-assessment.md` lists the decisions
+taken and the ones awaiting the owner; `docs/plans/` holds the executable plans
+for Phases 0–3. [CLAUDE.md](CLAUDE.md) has the working conventions.
 
 ## References
 

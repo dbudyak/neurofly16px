@@ -31,12 +31,13 @@ def _round(v: float) -> int:
 class SpriteRenderer:
     def __init__(self, cfg: RenderConfig) -> None:
         self._arena = cfg.arena_cm
+        self._offset = cfg.arena_cm / 2 if cfg.origin_at_center else 0.0
 
     def render(self, fly: FlyState) -> Frame:
         frame = new_frame()
         scale = SIDE / self._arena
-        cx = int((fly.x % self._arena) * scale)
-        cy = int((fly.y % self._arena) * scale)
+        cx = int(((fly.x + self._offset) % self._arena) * scale)
+        cy = int(((fly.y + self._offset) % self._arena) * scale)
         hx, hy = math.cos(fly.heading), math.sin(fly.heading)
         nx, ny = -hy, hx
 

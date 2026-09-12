@@ -34,6 +34,8 @@ class HopConfig:
 @dataclass(frozen=True)
 class RenderConfig:
     arena_cm: float = 8.0
+    origin_at_center: bool = True
+    """Put world (0, 0) in the middle of the panel; both sims start there."""
 
 
 @dataclass(frozen=True)

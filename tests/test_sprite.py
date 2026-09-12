@@ -6,6 +6,8 @@ from neurofly16px.config import RenderConfig
 from neurofly16px.render import sprite as s
 from neurofly16px.types import FlyState
 
+CORNER = RenderConfig(arena_cm=8.0, origin_at_center=False)
+
 
 def fly(**kw) -> FlyState:
     base = dict(
@@ -28,7 +30,7 @@ def px(frame: np.ndarray, col: int, y: int) -> tuple[int, ...]:
 
 
 def test_heading_zero_layout() -> None:
-    frame = s.SpriteRenderer(RenderConfig(arena_cm=8.0)).render(fly())
+    frame = s.SpriteRenderer(CORNER).render(fly())
     # centre pixel: 4 cm / 8 cm * 16 = 8
     assert px(frame, 8, 8) == s.BODY and px(frame, 7, 8) == s.BODY and px(frame, 9, 8) == s.BODY
     assert px(frame, 10, 8) == s.HEAD
@@ -40,14 +42,14 @@ def test_heading_zero_layout() -> None:
 
 
 def test_raised_leg_hugs_the_body() -> None:
-    frame = s.SpriteRenderer(RenderConfig()).render(
+    frame = s.SpriteRenderer(CORNER).render(
         fly(legs_down=(False, True, True, True, True, True))
     )
     assert px(frame, 9, 9) == s.LEG_UP and px(frame, 9, 10) == s.BG
 
 
 def test_heading_rotates_and_wraps() -> None:
-    frame = s.SpriteRenderer(RenderConfig()).render(fly(x=7.9, y=4.0, heading=math.pi / 2))
+    frame = s.SpriteRenderer(CORNER).render(fly(x=7.9, y=4.0, heading=math.pi / 2))
     # centre col = 15 (7.9/8*16 = 15.8 -> 15); head 2 px up: (15, 10)
     assert px(frame, 15, 10) == s.HEAD
     # left normal for heading +y is -x: front-left leg at c + h + 2n = (13, 9)
@@ -55,7 +57,7 @@ def test_heading_rotates_and_wraps() -> None:
 
 
 def test_airborne_shows_wings_and_changes_body_colour() -> None:
-    r = s.SpriteRenderer(RenderConfig())
+    r = s.SpriteRenderer(CORNER)
     up = r.render(fly(airborne=True, z=0.5, wing_phase=0.25))
     assert px(up, 8, 8) == s.BODY_AIRBORNE and px(up, 7, 10) == s.WING and px(up, 7, 6) == s.WING
     down = r.render(fly(airborne=True, z=0.5, wing_phase=0.75))
@@ -63,6 +65,11 @@ def test_airborne_shows_wings_and_changes_body_colour() -> None:
 
 
 def test_deterministic() -> None:
-    r = s.SpriteRenderer(RenderConfig())
+    r = s.SpriteRenderer(CORNER)
     a, b = r.render(fly(heading=0.3)), r.render(fly(heading=0.3))
     assert np.array_equal(a, b)
+
+
+def test_origin_at_center_puts_the_fly_mid_panel() -> None:
+    frame = s.SpriteRenderer(RenderConfig(arena_cm=8.0)).render(fly(x=0.0, y=0.0))
+    assert px(frame, 8, 8) == s.BODY and px(frame, 10, 8) == s.HEAD
