@@ -1,6 +1,6 @@
 """Phase 0 smoke test B: walk with the numpy policy.
 
-    MUJOCO_GL=egl uv run python scripts/smoke_numpy_policy.py [data/policy_walking.npz]
+MUJOCO_GL=egl uv run python scripts/smoke_numpy_policy.py [data/policy_walking.npz]
 """
 
 import sys

@@ -15,7 +15,9 @@ def tiny_policy(n_hidden: int = 2) -> NumpyPolicy:
         b0=np.zeros(h, np.float32),
         ln_scale=np.ones(h, np.float32),
         ln_offset=np.zeros(h, np.float32),
-        hidden=tuple((np.eye(h, dtype=np.float32), np.zeros(h, np.float32)) for _ in range(n_hidden)),
+        hidden=tuple(
+            (np.eye(h, dtype=np.float32), np.zeros(h, np.float32)) for _ in range(n_hidden)
+        ),
         w_mean=rng.normal(size=(h, d_out)).astype(np.float32),
         b_mean=np.zeros(d_out, np.float32),
     )

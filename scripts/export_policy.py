@@ -150,9 +150,7 @@ def main(policy_dir: str, out: str) -> None:
     for i, (w, b) in enumerate(params["hidden"], start=1):
         arrays[f"w{i}"] = var[w]
         arrays[f"b{i}"] = var[b]
-    np.savez(
-        out, obs_keys=np.array(keys), **{k: v.astype(np.float32) for k, v in arrays.items()}
-    )
+    np.savez(out, obs_keys=np.array(keys), **{k: v.astype(np.float32) for k, v in arrays.items()})
     np.savez(
         out.replace(".npz", "_reference.npz"), obs=obs, actions=actions, obs_keys=np.array(keys)
     )
