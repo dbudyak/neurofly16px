@@ -234,3 +234,37 @@ policy is not the problem (6 % of the budget): half the time is MuJoCo
 (`opt.solver=2` Newton, `iterations=100`, `ls_iterations=50` — far more than a
 desk toy needs) and half is dm_control's observation machinery. Both knobs are
 Phase 2 task 4; the main loop already tolerates slow motion.
+
+## Phase 2 performance (2026-09-13, i5-9600K, single thread)
+
+`scripts/bench_sim.py`, `FlybodySim` with the numpy policy, walking at
+0.8 × 2 cm/s with a 0.3 × 2 rad/s turn:
+
+| variant | control steps/s | real-time ratio |
+|---|---|---|
+| as first written | 183 | 0.37× |
+| with `FastFruitFly` (actuator-guard cache) | **236** | **0.47×** |
+
+The one avoidable cost found by profiling was upstream's
+`FruitFly.apply_action`, which calls `self.mjcf_model.find_all('actuator')`
+on **every** control step — a recursive walk of the ~1800-element MJCF tree,
+908,500 calls in 500 steps, 45 % of the loop. `FlybodySim` uses a
+`FastFruitFly` subclass that caches that guard; the controls it writes are
+bit-identical (unit-tested) and the resulting trajectory is unchanged.
+
+Solver iterations are *not* a knob here: `opt.iterations` 100 → 20 → 5 (with
+`ls_iterations` 10) changed neither the speed (177–183 steps/s before the
+walker fix) nor the trajectory — Newton converges long before the cap.
+
+What is left is irreducible without changing the physics:
+
+| item | share |
+|---|---|
+| `mj_step1` + `mj_step2` (10 substeps of 0.2 ms) | ~59 % |
+| dm_control observation updater + bindings | ~20 % |
+| numpy policy | ~11 % |
+
+So the loop runs at **≈0.47× real time**: the fly behaves correctly but in
+slow motion, and `loop.run` drops the backlog rather than accumulating lag.
+Raising the physics timestep is the only remaining lever and is not worth the
+stability risk for a desk toy (the policy was trained at 0.2 ms).

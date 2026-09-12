@@ -56,3 +56,22 @@ def test_fly_mode_hops_without_moving_the_body(sim: FlybodySim) -> None:
     for _ in range(200):
         fly = sim.step(SteeringCommand(1.0, 0.0, "walk"))
     assert fly.airborne and fly.z > 0.5 and math.hypot(fly.x, fly.y) < 0.3
+
+
+def test_fast_walker_matches_upstream_apply_action() -> None:
+    """FastFruitFly.apply_action must set exactly the same controls as upstream."""
+    import numpy as np
+    from flybody.fruitfly import fruitfly
+
+    from neurofly16px.sim.flybody_sim import FastFruitFly
+
+    sim = FlybodySim(FlybodyConfig(policy_path=str(POLICY)), HopConfig())
+    sim.reset()
+    action = np.linspace(-0.4, 0.4, sim._spec.shape[0])
+    walker = sim._task.walker
+    assert isinstance(walker, FastFruitFly)
+    walker.apply_action(sim.physics, action, None)
+    fast = sim.physics.data.ctrl.copy()
+    sim.physics.data.ctrl[:] = 0.0
+    fruitfly.FruitFly.apply_action(walker, sim.physics, action, None)
+    np.testing.assert_array_equal(fast, sim.physics.data.ctrl)

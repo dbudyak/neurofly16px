@@ -18,6 +18,29 @@ from neurofly16px.types import LEG_NAMES, FlyState, SteeringCommand
 
 log = logging.getLogger(__name__)
 
+
+class FastFruitFly(fruitfly.FruitFly):
+    """FruitFly whose `apply_action` does not walk the whole MJCF tree every step.
+
+    Upstream `fruitfly.py` guards `apply_action` with `self.mjcf_model.find_all(
+    "actuator")`, a recursive search of the ~1800-element model tree, on every
+    control step; profiling made it 45 % of the loop. The model does not change
+    during an episode, so the answer is cached. The rest is upstream's code.
+    """
+
+    def apply_action(self, physics, action, random_state) -> None:
+        del random_state  # Unused, as upstream.
+        if getattr(self, "_has_actuators", None) is None:
+            self._has_actuators = bool(self.mjcf_model.find_all("actuator"))
+        if not self._has_actuators:
+            return
+        self._prev_action[:] = action
+        ctrl = np.zeros(physics.model.nu)
+        for key, indices in self._action_indices.items():
+            if self._ctrl_indices[key] and indices:
+                ctrl[self._ctrl_indices[key]] = action[indices]
+        physics.set_control(ctrl)
+
 LEG_SENSORS = tuple(f"walker/touch_claw_{leg}" for leg in LEG_NAMES)
 VELOCIMETER = "walker/velocimeter"
 CONTROL_DT = 0.002
@@ -39,7 +62,7 @@ class FlybodySim:
         self._cfg = cfg
         self._policy = policy or NumpyPolicy.load(cfg.policy_path)
         self._task = SteerableWalk(
-            walker=fruitfly.FruitFly,
+            walker=FastFruitFly,
             arena=floors.Floor(),
             time_limit=EPISODE_S,
             leash_cm=cfg.leash_cm,
