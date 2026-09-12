@@ -33,7 +33,23 @@ See "Export env" below.
 
 ## Data
 
-See "Data" below.
+    mkdir -p data/flybody && cd data/flybody
+    curl -L -o trained-fly-policies.zip https://ndownloader.figshare.com/files/44815195
+    curl -L -o datasets_flight-imitation.zip https://ndownloader.figshare.com/files/51196859
+    unzip -q trained-fly-policies.zip -d trained-fly-policies
+    unzip -q datasets_flight-imitation.zip -d datasets_flight-imitation
+
+| file | size | sha256 |
+|---|---|---|
+| `trained-fly-policies.zip` | 6 537 720 B | `2d9937c9af2baafad1690c1b318791bde417b4d26dd96d4385ab6723d5d58582` |
+| `datasets_flight-imitation.zip` | 12 880 076 B | `0d152331e38f2ca6bb1f3286c2500eab49b5ccef93c51a9cc9cff9bb6cd368d0` |
+
+The unzipped layout has **no `policy/` level**, unlike `PLAN.md`:
+
+    data/flybody/trained-fly-policies/{walking,flight,vision-bumps,vision-trench}/saved_model.pb
+    data/flybody/datasets_flight-imitation/wing_pattern_fmech.npy
+
+So the walking policy directory is `data/flybody/trained-fly-policies/walking`.
 
 ## Bluetooth
 
