@@ -59,10 +59,9 @@ class FsmBehavior:
         self._track_loudness(audio, now)
 
         if self._should_startle(audio, now):
-            self._state = "startle"
+            self._enter("startle", audio)
             self._startle_at = now
             self._startle_side = self._side_away_from(audio.direction)
-            log.info("startle (rms %.2f, direction %s)", audio.rms, audio.direction)
 
         if self._state == "startle":
             elapsed = now - self._startle_at
@@ -70,12 +69,12 @@ class FsmBehavior:
                 return SteeringCommand(forward=0.0, turn=self._startle_side, mode="fly")
             if elapsed < cfg.startle_s + cfg.charge_s:
                 return SteeringCommand(forward=cfg.charge_forward, turn=0.0, mode="walk")
-            self._state = "walk"
+            self._enter("walk", audio)
 
         if self._state == "idle" and self._held_loud(now) >= cfg.walk_dwell_s:
-            self._state = "walk"
+            self._enter("walk", audio)
         elif self._state == "walk" and self._held_quiet(now) >= cfg.idle_dwell_s:
-            self._state = "idle"
+            self._enter("idle", audio)
 
         if self._state == "walk":
             return SteeringCommand(
@@ -84,6 +83,18 @@ class FsmBehavior:
         return SteeringCommand(forward=0.0, turn=self._idle_turn(now), mode="idle")
 
     # --- internals ----------------------------------------------------------
+
+    def _enter(self, state: State, audio: AudioFeatures) -> None:
+        if state != self._state:
+            log.info(
+                "%s -> %s (rms %.2f, onset %s, direction %s)",
+                self._state,
+                state,
+                audio.rms,
+                audio.onset,
+                "mono" if audio.direction is None else f"{audio.direction:+.2f}",
+            )
+        self._state = state
 
     def _track_loudness(self, audio: AudioFeatures, now: float) -> None:
         if audio.rms > self._cfg.t_walk:
