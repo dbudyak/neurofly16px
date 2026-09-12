@@ -1,0 +1,19 @@
+[loop]
+fps = 8
+behavior_hz = 50
+
+[render]
+arena_cm = 8.0
+
+[ditoo]
+mac = "B1:21:81:B9:E9:48"
+channel = 0          # 0 = resolve from SDP (our unit answers on 2)
+image_cmd = "44"     # verified on hardware in Phase 0
+brightness = 60
+settle_s = 1.5
+
+[flybody]
+policy_path = "data/policy_walking.npz"
+v_max_cm_s = 2.0
+w_max_rad_s = 2.0
+leash_cm = 0.15
