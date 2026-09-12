@@ -55,7 +55,7 @@ Each stage is a separate module with a plain dataclass interface, so any stage c
 
 ## Status
 
-Phases 0–2 done.
+Phases 0–3 done; Phase 4 built and awaiting a live check.
 
 - **Phase 0** (host verification): both `uv` environments exist, the pretrained
   walking policy is exported to numpy and reproduces TensorFlow to 3e-6, the fly
@@ -78,6 +78,20 @@ Phases 0–2 done.
   It runs at ≈0.47× real time on this host (i5-9600K), i.e. in slow motion;
   the loop drops the backlog instead of accumulating lag. Profiling and the
   one upstream inefficiency worth fixing are in `docs/flybody.md`.
+- **Phase 3** (real device): `--device ditoo` pushes one `0x44` packet per frame
+  over RFCOMM (channel 2 on this unit, resolved from SDP) —
+
+      MUJOCO_GL=egl uv run neurofly run --sim flybody --device ditoo --mac <MAC>
+
+  ran for 10 minutes with 9,181 frames and zero link drops at 16 fps. The link
+  accepts 121 frames/s; the panel looked smooth at every rate up to 20 fps.
+  Reconnect-after-power-loss is unit-tested but has not yet been seen on the
+  real device (`docs/ditoo-protocol.md`).
+- **Phase 4** (audio and behaviour): `--audio mic --behavior fsm` listens on the
+  microphone (PipeWire `pw-record`; `sounddevice` where PortAudio exists) and
+  runs the idle / walk / startle state machine. Silence keeps the fly still with
+  the live microphone; the talk-and-clap thresholds still need one session in
+  front of the desk (`docs/plans/2026-09-13-phase4-audio-behavior.md`).
 
 [PLAN.md](PLAN.md) is the roadmap; `docs/plan-assessment.md` lists the decisions
 taken and the ones awaiting the owner; `docs/plans/` holds the executable plans

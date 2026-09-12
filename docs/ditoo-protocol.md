@@ -188,3 +188,19 @@ beyond the frame rate. The sim rate is lower than `scripts/bench_sim.py`'s 236
 steps/s because rendering, the behaviour tick and the display worker share the
 process; the loop absorbs it by dropping backlog (slow motion), which is why
 `dropped_steps` is large and `frames` is not.
+
+A second, 5-minute run (2026-09-13, 00:25–00:30) was also clean: 4,527 frames,
+0 drops, 0 reconnects.
+
+### Power-cycle recovery: not yet exercised on hardware
+
+The reconnect path (drop the link on `OSError`, retry with 1 s → 30 s backoff,
+count frames dropped meanwhile) is covered by unit tests with fake sockets
+(`tests/test_ditoo_display.py`), but the device stayed powered through the
+5-minute run meant to test it, so the real sequence — write failure, growing
+retry gaps, `Ditoo connected` again — has never been observed. Repeat with:
+
+    MUJOCO_GL=egl uv run neurofly run --sim flybody --device ditoo \
+        --mac B1:21:81:B9:E9:48 --seconds 300 --log-level INFO 2> powercycle.log
+
+switching the Ditoo off around minute 1 and on again around minute 2.

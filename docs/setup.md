@@ -88,3 +88,38 @@ Verified end to end on 2026-09-12:
 resolves the channel from SDP, connects, reads status, switches to the design
 view, sets brightness and puts a checkerboard on the panel. Findings are in
 `docs/ditoo-protocol.md` under "Confirmed on hardware".
+
+## Audio (Phase 4)
+
+`sounddevice` installs (`uv sync --extra audio`) but cannot open a device on
+this host: it needs system PortAudio, which is not installed, and Gentoo's
+`media-libs/portaudio` defaults to `USE="-alsa"`, i.e. no backend. Rather than
+change the system, the microphone stage reads raw float32 PCM from PipeWire's
+`pw-record` (`neurofly16px/audio/pipewire.py`); `sounddevice`
+(`neurofly16px/audio/mic.py`) stays for hosts that do have PortAudio, and
+`--audio mic` picks PipeWire when `pw-record` is on PATH.
+
+**The default source captures nothing on this host.** `pactl info` reports
+`Default Source: alsa_input.pci-0000_00_1f.3.pro-input-2` (onboard, pro-audio
+profile); `pw-record` and `parec` both produce 0 bytes from it. Name the real
+microphone instead — in `neurofly.toml` (`[audio] device = ...`) or with
+`--audio-device`:
+
+    alsa_input.usb-M-Audio_M-Audio_Uber_Mic-01.analog-stereo
+
+List candidates with `pactl list short sources`.
+
+Measured levels on that microphone (raw block RMS, 20 ms blocks):
+
+| condition | RMS |
+|---|---|
+| quiet room | 0.0023 – 0.0038 (median 0.0030) |
+| speech at the desk | ~0.03 (`loud_rms` default 0.05) |
+
+Watch the features live while talking and clapping:
+
+    uv run python scripts/audio_probe.py --device alsa_input.usb-M-Audio_M-Audio_Uber_Mic-01.analog-stereo
+
+In the quiet room the normalised loudness reads 0.01–0.05, below the FSM's
+`t_idle` 0.08, so the fly stands still; an 8-second `--audio mic --behavior fsm`
+run confirmed it stays in place with the live microphone.
