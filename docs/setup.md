@@ -80,3 +80,11 @@ Adapter, pairing and the Ditoo's RFCOMM channel are recorded in
 `docs/host-bluetooth.md`. Summary: MAC `B1:21:81:B9:E9:48`, names
 `DitooPro-Audio` (Classic) / `DitooPro-Light` (BLE), **RFCOMM channel 2**
 (channel 1 is the hands-free record on this unit).
+
+Verified end to end on 2026-09-12:
+
+    uv run python scripts/ditoo_probe.py B1:21:81:B9:E9:48 --image-cmd 44
+
+resolves the channel from SDP, connects, reads status, switches to the design
+view, sets brightness and puts a checkerboard on the panel. Findings are in
+`docs/ditoo-protocol.md` under "Confirmed on hardware".

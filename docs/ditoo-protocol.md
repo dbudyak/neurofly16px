@@ -131,10 +131,33 @@ Sizes: 4-colour frame 83 B, 16-colour frame 183 B, 256-colour frame 1,031 B
 - Audio playback on the device stalls the link (owner's note in
   `CLAUDE.md`). Keep the speaker silent while streaming.
 
-## Confirm on hardware (Phase 0 → Phase 3)
+## Confirmed on hardware (2026-09-12, `scripts/ditoo_probe.py`)
 
-1. `bluetoothctl` pairing with `Ditoo-Audio`; RFCOMM channel (expect 1).
-2. `0x46` reply length and offsets 6 / 12 on the original Ditoo.
-3. Which image command works: `0x44`, `0x49`, or `0x8b`.
-4. Whether `0x45 05` + wait is required.
-5. Sustainable frame rate with `0x44`.
+Our unit is a **DitooPro** (`DitooPro-Audio` / `DitooPro-Light`, MAC
+`B1:21:81:B9:E9:48`); details of the host side in `docs/host-bluetooth.md`.
+
+1. ✅ Pairing and transport. **RFCOMM channel 2**, not 1 — channel 1 is the
+   hands-free record on this unit. `rfcomm.resolve_channel()` reads it from
+   `sdptool search --bdaddr <MAC> SP` at connect time; do not hard-code it.
+   The `AF_BLUETOOTH`-by-number + ctypes `connect()` path works on the
+   uv-managed Python 3.12 (no `socket.AF_BLUETOOTH` needed). Connecting took
+   ~20 ms with the device already bonded, and A2DP being connected at the same
+   time did not block the SPP link.
+2. ✅ `0x46` status reply: **31 bytes**, offsets as documented —
+   `01 1b 00 04 46 55 <view> 00 00 ff 50 00 <brightness> …`. Observed
+   `view: 4 → 5` after `0x45 05` and `brightness: 57 → 60` after `0x74 3c`,
+   so offsets 6 and 12 hold on the Pro as well.
+3. ✅ **`0x44` works**: one 91-byte packet (`01 57 00 44 00 0a 0a 04 aa …`)
+   put a black/white checkerboard on the panel. `0x49` / `0x8b` were not
+   needed. The image survives disconnection (it stays until replaced).
+4. Orientation: the marker pixel at `frame[0, 0]` appears **top-left**, so
+   `Frame[row, col]` maps to the panel with row 0 = top and col 0 = left, no
+   flip or rotation needed.
+5. `0x45 05` + a 1.5 s settle was used and worked; whether the wait is
+   strictly required is untested (probe `--settle 0`).
+6. **Replies arrive concatenated**: a single `recv()` returned an unsolicited
+   `0x0d`-long `0xf7` notification *followed by* the 31-byte status reply.
+   Parse a stream, not a packet: `protocol.split_frames()` /
+   `protocol.find_reply()`.
+7. Sustainable frame rate with `0x44`: still open (Phase 3,
+   `scripts/ditoo_bench.py`).

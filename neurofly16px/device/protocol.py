@@ -57,6 +57,46 @@ def parse_response(data: bytes) -> tuple[int, bool, bytes]:
     return data[4], data[5] == ACK, bytes(data[6:-3])
 
 
+def split_frames(buffer: bytes) -> tuple[list[bytes], bytes]:
+    """Split a received byte stream into whole `01 ... 02` frames plus the remainder.
+
+    The device interleaves unsolicited notifications with replies (observed: a
+    0xf7 packet immediately before the 0x46 status reply, docs/ditoo-protocol.md
+    "Confirm on hardware"), so a single recv() can hold several frames.
+    """
+    frames: list[bytes] = []
+    rest = buffer
+    while True:
+        start = rest.find(b"\x01")
+        if start < 0:
+            return frames, b""
+        rest = rest[start:]
+        if len(rest) < 7:
+            return frames, rest
+        (length,) = struct.unpack_from("<H", rest, 1)
+        end = length + 4
+        if len(rest) < end:
+            return frames, rest
+        if rest[end - 1] != 0x02:  # not a frame after all; skip this 0x01
+            rest = rest[1:]
+            continue
+        frames.append(rest[:end])
+        rest = rest[end:]
+
+
+def find_reply(buffer: bytes, cmd: int) -> bytes | None:
+    """The last valid reply to `cmd` in a received stream, or None."""
+    found = None
+    for frame in split_frames(buffer)[0]:
+        try:
+            original, _, _ = parse_response(frame)
+        except ValueError:
+            continue
+        if original == cmd:
+            found = frame
+    return found
+
+
 def palette_and_indices(frame: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Unique colours (sorted, at least two entries) and a palette index per pixel."""
     if frame.shape != (SIDE, SIDE, 3) or frame.dtype != np.uint8:

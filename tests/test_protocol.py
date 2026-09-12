@@ -100,3 +100,30 @@ def test_bad_frame_shape_rejected() -> None:
         p.encode_frame(np.zeros((16, 16), np.uint8))
     with pytest.raises(ValueError):
         p.encode_frame(np.zeros((16, 16, 3), np.float32))
+
+
+# Captured from the device on 2026-09-12: an unsolicited 0xf7 notification
+# immediately followed by the 0x46 status reply in one recv().
+CAPTURED_STREAM = bytes.fromhex(
+    "010d0004f755 4e6f6202730400 00f50202"
+    "011b000446 5505 0000ff50003c0001003c01ff50000901000101 1c1c 1b0402"
+)
+
+
+def test_split_frames_handles_concatenated_replies() -> None:
+    frames, rest = p.split_frames(CAPTURED_STREAM)
+    assert rest == b""
+    assert [len(f) for f in frames] == [17, 31]
+    assert p.parse_status(frames[1]) == {"view": 5, "brightness": 60}
+
+
+def test_split_frames_keeps_partial_tail() -> None:
+    frames, rest = p.split_frames(CAPTURED_STREAM[:-3])
+    assert len(frames) == 1
+    assert rest == CAPTURED_STREAM[17:-3]
+
+
+def test_find_reply_picks_the_matching_command() -> None:
+    frame = p.find_reply(CAPTURED_STREAM, p.CMD_GET_STATUS)
+    assert frame is not None and p.parse_status(frame)["brightness"] == 60
+    assert p.find_reply(CAPTURED_STREAM, p.CMD_IMAGE) is None
