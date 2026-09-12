@@ -199,3 +199,38 @@ synthesising a reference.
    Both `IPython` and `matplotlib` are needed at import time
    (`flybody/utils.py`) even with `--no-deps`; they are installed in
    `.venv-tf`.
+3. ✅ Weight export (`scripts/export_policy.py`), with one correction to the
+   assumed architecture:
+   - The SavedModel's checkpoint is **flat and unnamed** — `_variables/0` …
+     `_variables/13`, and the `_CHECKPOINTABLE_OBJECT_GRAPH` carries no Sonnet
+     attribute names (no `.../w`, `/b`, `/scale`, `/offset` keys). The mapping
+     is therefore recovered from shapes and order (each 2-D tensor is preceded
+     by its bias) and validated numerically against the TF policy.
+   - Layer sizes are **512, not 256**, and the torso has **three** hidden ELU
+     layers, not two: `Linear(741→512) → LayerNorm → tanh → 3 × (Linear(512→512)
+     → ELU) → Linear(512→59)`. `LayerNormMLP(layer_sizes=(512, 512, 512, 512),
+     activate_final=True)`. `NumpyPolicy` reads the hidden depth from the npz.
+   - Two (512, 59) heads exist: `_variables/11`/`10` is the mean (std 0.058),
+     `_variables/13`/`12` the softplus scale head (std 0.0035), unused at test
+     time. LayerNorm scale is `_variables/3`, offset `_variables/2`.
+   - Agreement: **max |numpy − TF| = 3.26e-06** over 64 observations
+     (obs_dim 741, action_dim 59).
+4. ✅ Smoke test B (`scripts/smoke_numpy_policy.py`, runtime env): the numpy
+   policy walks the same trajectory as TF — x = +4.022 cm after 2.00 s at the
+   2 cm/s reference.
+
+## Performance (2026-09-12, i5-9600K, single thread)
+
+| item | measured |
+|---|---|
+| raw `physics.step()` (0.2 ms of sim) | 0.236 ms |
+| 10 physics steps = one control step | ~2.4 ms |
+| `env.step()` incl. dm_control observations | 5.27 ms |
+| numpy policy call | 0.30 ms |
+| **whole loop** | **189 control steps/s = 0.38× real time** |
+
+So the target of 500 control steps/s is *not* met out of the box, and the
+policy is not the problem (6 % of the budget): half the time is MuJoCo
+(`opt.solver=2` Newton, `iterations=100`, `ls_iterations=50` — far more than a
+desk toy needs) and half is dm_control's observation machinery. Both knobs are
+Phase 2 task 4; the main loop already tolerates slow motion.

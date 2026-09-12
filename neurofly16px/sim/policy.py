@@ -1,32 +1,26 @@
 """Numpy port of the flybody DMPO walking policy.
 
-Architecture (docs/flybody.md, "Pretrained policies"): observations flattened and
-concatenated in a fixed key order -> Linear -> LayerNorm -> tanh -> Linear -> ELU
--> Linear -> ELU -> Linear (mean of the Gaussian head). Only the mean is needed at
-test time; CanonicalSpecWrapper clips it to [-1, 1] downstream.
+Architecture (docs/flybody.md, "Pretrained policies"): observations are flattened
+and concatenated in a fixed key order, then
+
+    Linear -> LayerNorm(eps 1e-5) -> tanh -> (Linear -> ELU) * n -> Linear(mean)
+
+Only the mean of the Gaussian head is needed at test time; `CanonicalSpecWrapper`
+clips it to [-1, 1] downstream. The shipped walking policy has n = 3 hidden layers
+of 512 units (measured, see docs/flybody.md "Host results"), so the number of
+hidden layers is read from the npz rather than hard-coded.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import itertools
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
 _LN_EPS = 1e-5
-_WEIGHT_NAMES = (
-    "w0",
-    "b0",
-    "ln_scale",
-    "ln_offset",
-    "w1",
-    "b1",
-    "w2",
-    "b2",
-    "w_mean",
-    "b_mean",
-)
 
 
 def flatten_observation(obs: Mapping[str, np.ndarray], keys: tuple[str, ...]) -> np.ndarray:
@@ -47,19 +41,43 @@ class NumpyPolicy:
     b0: np.ndarray
     ln_scale: np.ndarray
     ln_offset: np.ndarray
-    w1: np.ndarray
-    b1: np.ndarray
-    w2: np.ndarray
-    b2: np.ndarray
+    hidden: tuple[tuple[np.ndarray, np.ndarray], ...]
     w_mean: np.ndarray
     b_mean: np.ndarray
 
     @classmethod
     def load(cls, path: str | Path) -> NumpyPolicy:
         with np.load(path, allow_pickle=False) as f:
-            keys = tuple(str(k) for k in f["obs_keys"])
-            weights = {name: f[name].astype(np.float32) for name in _WEIGHT_NAMES}
-        return cls(obs_keys=keys, **weights)
+            hidden = []
+            for i in itertools.count(1):
+                if f"w{i}" not in f:
+                    break
+                hidden.append((f[f"w{i}"].astype(np.float32), f[f"b{i}"].astype(np.float32)))
+            return cls(
+                obs_keys=tuple(str(k) for k in f["obs_keys"]),
+                w0=f["w0"].astype(np.float32),
+                b0=f["b0"].astype(np.float32),
+                ln_scale=f["ln_scale"].astype(np.float32),
+                ln_offset=f["ln_offset"].astype(np.float32),
+                hidden=tuple(hidden),
+                w_mean=f["w_mean"].astype(np.float32),
+                b_mean=f["b_mean"].astype(np.float32),
+            )
+
+    def save(self, path: str | Path) -> None:
+        arrays: dict[str, np.ndarray] = {
+            "obs_keys": np.array(self.obs_keys),
+            "w0": self.w0,
+            "b0": self.b0,
+            "ln_scale": self.ln_scale,
+            "ln_offset": self.ln_offset,
+            "w_mean": self.w_mean,
+            "b_mean": self.b_mean,
+        }
+        for i, (w, b) in enumerate(self.hidden, start=1):
+            arrays[f"w{i}"] = w
+            arrays[f"b{i}"] = b
+        np.savez(path, **arrays)
 
     @property
     def action_dim(self) -> int:
@@ -74,11 +92,34 @@ class NumpyPolicy:
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         """x: (obs_dim,) or (batch, obs_dim) -> canonical action(s), float32."""
-        h = x @ self.w0 + self.b0
+        h = np.asarray(x, dtype=np.float32) @ self.w0 + self.b0
         mean = h.mean(axis=-1, keepdims=True)
         var = h.var(axis=-1, keepdims=True)
         h = (h - mean) / np.sqrt(var + _LN_EPS) * self.ln_scale + self.ln_offset
         h = np.tanh(h)
-        h = _elu(h @ self.w1 + self.b1)
-        h = _elu(h @ self.w2 + self.b2)
+        for w, b in self.hidden:
+            h = _elu(h @ w + b)
         return (h @ self.w_mean + self.b_mean).astype(np.float32)
+
+
+def make_policy(
+    obs_keys: Sequence[str],
+    w0: np.ndarray,
+    b0: np.ndarray,
+    ln_scale: np.ndarray,
+    ln_offset: np.ndarray,
+    hidden: Sequence[tuple[np.ndarray, np.ndarray]],
+    w_mean: np.ndarray,
+    b_mean: np.ndarray,
+) -> NumpyPolicy:
+    """Build a policy from plain sequences (used by scripts/export_policy.py)."""
+    return NumpyPolicy(
+        obs_keys=tuple(obs_keys),
+        w0=np.asarray(w0, np.float32),
+        b0=np.asarray(b0, np.float32),
+        ln_scale=np.asarray(ln_scale, np.float32),
+        ln_offset=np.asarray(ln_offset, np.float32),
+        hidden=tuple((np.asarray(w, np.float32), np.asarray(b, np.float32)) for w, b in hidden),
+        w_mean=np.asarray(w_mean, np.float32),
+        b_mean=np.asarray(b_mean, np.float32),
+    )
