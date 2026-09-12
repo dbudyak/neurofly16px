@@ -7,7 +7,7 @@ from neurofly16px import config as c
 
 def test_defaults() -> None:
     cfg = c.load_config(None)
-    assert cfg.loop.fps == 8.0 and cfg.loop.behavior_hz == 50.0
+    assert cfg.loop.fps == 16.0 and cfg.loop.behavior_hz == 50.0
     assert cfg.render.arena_cm == 8.0
     assert cfg.hop.duration_s == 0.8
 

@@ -159,5 +159,10 @@ Our unit is a **DitooPro** (`DitooPro-Audio` / `DitooPro-Light`, MAC
    `0x0d`-long `0xf7` notification *followed by* the 31-byte status reply.
    Parse a stream, not a packet: `protocol.split_frames()` /
    `protocol.find_reply()`.
-7. Sustainable frame rate with `0x44`: still open (Phase 3,
-   `scripts/ditoo_bench.py`).
+7. ✅ Frame rate (`scripts/ditoo_bench.py`, 2026-09-13). Phase A: **121
+   writes/s** for 100 back-to-back 91-byte `0x44` packets (8.3 ms each), zero
+   errors — the RFCOMM link is not the limit at any rate we need. Phase B:
+   a sweeping bar at 4, 8, 12, 16 and 20 fps looked **smooth at every rate**
+   on the panel, 461 frames, 0 dropped, 0 reconnects.
+   `LoopConfig.fps` default is therefore **16** — smooth, with headroom under
+   both the visually-checked 20 fps and the 121 writes/s ceiling.

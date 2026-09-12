@@ -11,7 +11,11 @@ from typing import Any
 
 @dataclass(frozen=True)
 class LoopConfig:
-    fps: float = 8.0
+    fps: float = 16.0
+    """Frames per second pushed to the display.
+
+    16 fps was measured smooth on the Ditoo; see docs/ditoo-protocol.md.
+    """
     behavior_hz: float = 50.0
     max_catchup_steps: int = 50
 
