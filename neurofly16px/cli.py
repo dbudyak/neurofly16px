@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 AUDIO = ("stub",)
 BEHAVIOR = ("scripted",)
 SIM = ("stub", "flybody")
-DEVICE = ("terminal", "ppm")
+DEVICE = ("terminal", "ppm", "ditoo")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,6 +42,8 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--fps", type=float, default=None)
     r.add_argument("--seconds", type=float, default=None)
     r.add_argument("--frames-dir", type=Path, default=Path("frames"))
+    r.add_argument("--mac", default=None, help="Ditoo MAC (default: config ditoo.mac)")
+    r.add_argument("--image-cmd", choices=("44", "49", "8b"), default=None)
     r.add_argument("--log-level", default="INFO")
     return p
 
@@ -68,6 +70,15 @@ def build_stages(
     display: DisplayWorker
     if args.device == "terminal":
         display = DisplayWorker(TerminalDisplay())
+    elif args.device == "ditoo":
+        from neurofly16px.device.ditoo import DitooDisplay
+
+        dc = dataclasses.replace(
+            cfg.ditoo,
+            mac=args.mac or cfg.ditoo.mac,
+            image_cmd=args.image_cmd or cfg.ditoo.image_cmd,
+        )
+        display = DisplayWorker(DitooDisplay(dc))
     else:
         display = DisplayWorker(PpmDisplay(args.frames_dir))
     return audio, behavior, sim, renderer, display
