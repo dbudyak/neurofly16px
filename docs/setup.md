@@ -29,7 +29,30 @@ Python 3.12 because flybody pins `numpy==1.26.4`.
 
 ### Export env `.venv-tf` (Python 3.10, only for `scripts/export_policy.py`)
 
-See "Export env" below.
+    uv python install 3.10
+    uv venv --python 3.10 .venv-tf
+    uv pip install --python .venv-tf/bin/python \
+        "tensorflow==2.8.0" "tensorflow-probability==0.16.0" "protobuf==3.20.3" \
+        "numpy<1.24" "dm_control" "mujoco" "h5py"
+    uv pip install --python .venv-tf/bin/python --no-deps \
+        "flybody @ git+https://github.com/TuragaLab/flybody.git@d015e9bfe441bd90ae431bac24c55cb74bdbce26"
+
+Resolved without pinning dm_control/mujoco: the current releases accept
+numpy 1.23. Versions:
+
+```
+dm-control==1.0.46
+flybody @ git+https://github.com/TuragaLab/flybody.git@d015e9bfe441bd90ae431bac24c55cb74bdbce26
+mujoco==3.13.0
+numpy==1.23.5
+protobuf==3.20.3
+tensorflow==2.8.0
+tensorflow-io-gcs-filesystem==0.37.1
+tensorflow-probability==0.16.0
+```
+
+TensorFlow logs `Could not load dynamic library 'libcudart.so.11.0'` at
+import; harmless, the export runs on the CPU.
 
 ## Data
 
