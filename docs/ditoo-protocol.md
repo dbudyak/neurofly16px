@@ -166,3 +166,25 @@ Our unit is a **DitooPro** (`DitooPro-Audio` / `DitooPro-Light`, MAC
    on the panel, 461 frames, 0 dropped, 0 reconnects.
    `LoopConfig.fps` default is therefore **16** — smooth, with headroom under
    both the visually-checked 20 fps and the 121 writes/s ceiling.
+
+## Soak test (2026-09-13)
+
+Ten minutes of the real simulation driving the panel:
+
+    MUJOCO_GL=egl uv run neurofly run --sim flybody --device ditoo \
+        --mac B1:21:81:B9:E9:48 --seconds 600 --log-level INFO
+
+| item | value |
+|---|---|
+| wall time | 600.0 s |
+| frames pushed | 9,181 (15.3 fps against the 16 fps cap) |
+| sim steps | 103,328 (172/s = 0.34x real time with the display in the same process) |
+| link drops | **0** |
+| reconnects | 0 |
+| dropped frames | 0 |
+
+The link held for the whole run with one `0x44` packet per frame and no pacing
+beyond the frame rate. The sim rate is lower than `scripts/bench_sim.py`'s 236
+steps/s because rendering, the behaviour tick and the display worker share the
+process; the loop absorbs it by dropping backlog (slow motion), which is why
+`dropped_steps` is large and `frames` is not.
