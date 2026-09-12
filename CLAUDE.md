@@ -12,8 +12,8 @@ Project: a flybody (MuJoCo fruit fly) simulation rendered to a Divoom Ditoo 16×
 
 ## Code
 
-- Python 3.x, version pinned by flybody's requirements (check `pyproject.toml` there).
-- `uv` for env and locking if it works with the TF pins; otherwise conda. Record which.
+- Python 3.12 for the runtime env (flybody pins `numpy==1.26.4`, which caps us at 3.12). TensorFlow 2.8 lives only in a separate Python 3.10 env used by `scripts/export_policy.py`; it is never a runtime dependency (see `docs/plan-assessment.md` #3, #4).
+- `uv` for both envs and for locking (`uv sync`); the exact commands are in `docs/setup.md` once Phase 0 has run on the host.
 - Formatting/linting: `ruff`. Type hints everywhere; dataclasses for stage messages.
 - Tests: `pytest`. Unit-test the renderer (deterministic FlyState → frame), the FSM (feature sequences → command sequences), and the Ditoo frame encoder (bytes against known-good captures). Sim and hardware are integration-tested manually.
 - Logging via `logging`, one logger per module, no prints in library code.

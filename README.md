@@ -1,6 +1,7 @@
 # neurofly16px
 
 A physically simulated fruit fly living on a 16×16 LED display, reacting to sound.
+![neurofly](https://github.com/dbudyak/neurofly16px/repository/blob/main/logo.png)
 
 ## Motivation
 
@@ -33,7 +34,7 @@ This is a hobby project. The goal is a fly that feels alive on a desk toy, not a
                         descending-neuron readout out; viewer/ shows heat map
    │  SteeringCommand (v_forward, v_turn, mode)
    ▼
- sim/          flybody env + pretrained policy, MuJoCo step   ~100–500 Hz physics
+ sim/          flybody env + pretrained policy   500 Hz control, 5 kHz physics
    │  FlyState (pos, heading, joint angles, airborne, gait phase)
    ▼
  render/       FlyState → 16×16 RGB frame (sprite-based, EGL render optional)
@@ -52,7 +53,7 @@ Each stage is a separate module with a plain dataclass interface, so any stage c
 
 ## Status
 
-Planning. See [PLAN.md](PLAN.md) for the implementation plan and [CLAUDE.md](CLAUDE.md) for working conventions.
+Planning done, nothing built yet. [PLAN.md](PLAN.md) is the roadmap with every assumption verified against the sources; `docs/plan-assessment.md` lists the decisions taken and the ones awaiting the owner; `docs/flybody.md`, `docs/ditoo-protocol.md` and `docs/banc.md` hold the verified facts; `docs/plans/` holds the executable plans for Phases 0–3. [CLAUDE.md](CLAUDE.md) has the working conventions.
 
 ## References
 
