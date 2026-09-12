@@ -18,6 +18,8 @@ from neurofly16px.config import Config, load_config
 from neurofly16px.device.ppm import PpmDisplay
 from neurofly16px.device.terminal import TerminalDisplay
 from neurofly16px.device.worker import DisplayWorker
+from neurofly16px.render.base import Renderer
+from neurofly16px.render.side import SideRenderer
 from neurofly16px.render.sprite import SpriteRenderer
 from neurofly16px.sim.base import FlySim
 from neurofly16px.sim.stub import StubSim
@@ -28,6 +30,7 @@ AUDIO = ("stub", "mic", "pipewire", "portaudio")
 BEHAVIOR = ("scripted", "fsm")
 SIM = ("stub", "flybody")
 DEVICE = ("terminal", "ppm", "ditoo")
+VIEW = ("side", "top")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,6 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--frames-dir", type=Path, default=Path("frames"))
     r.add_argument("--mac", default=None, help="Ditoo MAC (default: config ditoo.mac)")
     r.add_argument("--image-cmd", choices=("44", "49", "8b"), default=None)
+    r.add_argument("--view", choices=VIEW, default=None, help="default: config render.view")
     r.add_argument("--log-level", default="INFO")
     return p
 
@@ -75,7 +79,7 @@ def _pipewire_available() -> bool:
 
 def build_stages(
     args: argparse.Namespace, cfg: Config
-) -> tuple[AudioSource, Behavior, FlySim, SpriteRenderer, DisplayWorker]:
+) -> tuple[AudioSource, Behavior, FlySim, Renderer, DisplayWorker]:
     audio: AudioSource = StubAudio(None) if args.audio == "stub" else build_mic(args, cfg)
     behavior: Behavior = FsmBehavior(cfg.fsm) if args.behavior == "fsm" else ScriptedBehavior()
     sim: FlySim
@@ -91,7 +95,9 @@ def build_stages(
         sim = FlybodySim(fb, cfg.hop)
     else:
         sim = StubSim(cfg.stub_sim, cfg.hop)
-    renderer = SpriteRenderer(cfg.render)
+    view = args.view or cfg.render.view
+    render_cfg = dataclasses.replace(cfg.render, view=view)
+    renderer: Renderer = SideRenderer(render_cfg) if view == "side" else SpriteRenderer(render_cfg)
     display: DisplayWorker
     if args.device == "terminal":
         display = DisplayWorker(TerminalDisplay())

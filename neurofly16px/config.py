@@ -37,9 +37,16 @@ class HopConfig:
 
 @dataclass(frozen=True)
 class RenderConfig:
+    view: str = "side"
+    """"side" (the fly walks along the bottom of the panel, seen from the side) or "top"."""
     arena_cm: float = 8.0
+    """World distance mapped across the 16 columns."""
     origin_at_center: bool = True
     """Put world (0, 0) in the middle of the panel; both sims start there."""
+    height_cm: float = 2.0
+    """Side view only: world height mapped across the 16 rows, so a 0.6 cm hop lifts ~5 px."""
+    show_ground: bool = True
+    """Side view only: draw a dim floor line along the bottom row."""
 
 
 @dataclass(frozen=True)
