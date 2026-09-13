@@ -10,6 +10,7 @@ from pathlib import Path
 
 from neurofly16px import loop
 from neurofly16px.audio.base import AudioSource
+from neurofly16px.audio.stub import DEMO_SCRIPT as DEMO_AUDIO
 from neurofly16px.audio.stub import StubAudio
 from neurofly16px.behavior.base import Behavior
 from neurofly16px.behavior.fsm import FsmBehavior
@@ -30,7 +31,7 @@ from neurofly16px.sim.stub import StubSim
 
 log = logging.getLogger(__name__)
 
-AUDIO = ("stub", "mic", "pipewire", "portaudio")
+AUDIO = ("stub", "demo", "mic", "pipewire", "portaudio")
 BEHAVIOR = ("scripted", "fsm", "wander", "brain")
 SIM = ("stub", "flybody")
 DEVICE = ("terminal", "ppm", "ditoo")
@@ -107,7 +108,13 @@ def _pipewire_available() -> bool:
 def build_stages(
     args: argparse.Namespace, cfg: Config
 ) -> tuple[AudioSource, Behavior, FlySim, Renderer, DisplayWorker]:
-    audio: AudioSource = StubAudio(None) if args.audio == "stub" else build_mic(args, cfg)
+    audio: AudioSource
+    if args.audio == "stub":
+        audio = StubAudio(None)
+    elif args.audio == "demo":
+        audio = StubAudio(DEMO_AUDIO)
+    else:
+        audio = build_mic(args, cfg)
     behavior: Behavior
     if args.behavior == "brain":
         # imported lazily: torch and the connectome are a heavy optional extra

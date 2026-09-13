@@ -23,3 +23,13 @@ def test_script_loops() -> None:
     assert a.latest().rms == 0.8 and a.latest().t == 1.2
     now[0] = 1.6  # wrapped to 0.1
     assert a.latest().rms == 0.0
+
+
+def test_demo_script_covers_quiet_talking_and_claps() -> None:
+    from neurofly16px.audio.stub import DEMO_SCRIPT
+
+    kinds = {(f.rms > 0.8 and f.onset, f.rms > 0.2) for _, f in DEMO_SCRIPT}
+    assert (True, True) in kinds, "a clap"
+    assert (False, True) in kinds, "talking"
+    assert (False, False) in kinds, "silence"
+    assert {f.direction for _, f in DEMO_SCRIPT if f.onset} == {0.6, -0.6}, "claps from both sides"

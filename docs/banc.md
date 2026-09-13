@@ -292,3 +292,50 @@ Sugar GRNs stimulated at 100 Hz for one simulated second:
 Taste drives the proboscis motor neurons it should, does not touch the auditory
 neurons it should not, and the resting network is silent. No runaway: the
 FAFB-tuned `w_syn` of 0.275 mV holds on brain + nerve cord at `min_synapses` 5.
+
+## What sound actually reaches the body (2026-09-13)
+
+Stimulating the Johnston's-organ sound populations (JO-A + JO-B, both sides) for
+one simulated second and counting descending spikes:
+
+| drive | DNp01 (giant fibre) | threat response | takeoff / landing | flight steering | walking |
+|---|---|---|---|---|---|
+| quiet | 0 | 0 | 0 | 0 | 0 |
+| 40 Hz (speech) | 50 / 10 Hz | 0.48 | 0.15 | 0.12 | **0.00** |
+| 150 Hz (loud) | 139 / 95 Hz | 1.75 | 1.57 | 1.73 | **0.00** |
+| 250 Hz (clap) | 184 / 143 Hz | 4.20 | 3.12 | 2.6 | **0.00** |
+
+The result is unambiguous and biologically sensible: sound reaches the body
+through the **escape pathway**. The giant fibre dominates by two orders of
+magnitude, then the threat-response and takeoff clusters; the walking cluster is
+silent at every level.
+
+This killed the readout as first written (PLAN.md 6.3 mapped `dn_walking` to
+forward speed, which would never have moved). The readout now uses what responds:
+
+- **escape**: DNp01 above `giant_fibre_hz`, *and* above `gf_novelty_ratio` times
+  its own slow baseline. Without that second condition any sustained sound pins
+  the fly in escape forever — the giant fibre keeps firing while the ears are
+  driven. Real escape responses habituate, so this is a feature, not a hack.
+- **forward**: the mean rate over all 1,316 descending neurons, against
+  `drive_hz` (2 Hz = full speed; measured range is 0.2 Hz for speech, ~1 Hz for a
+  clap).
+- **turn**: the left-right *contrast* of descending activity,
+  `(L - R) / (L + R)`, so it does not grow with loudness.
+
+Hold times (escape duration, idle threshold) are wall-clock, not simulated: the
+brain runs at a fraction of real time and a 0.8 s escape measured in brain time
+would keep the fly airborne for several seconds on the desk.
+
+## Viewer
+
+`neurofly16px/viewer/` serves the heat map over websockets from inside the brain
+process (one port, page and stream). Each pixel is a bin of soma positions in the
+x-y projection, coloured by spikes per 20 ms window; the panel also shows the
+descending rates, the resulting command, and the brain/body speed ratio.
+
+Measured end to end (`--audio demo --behavior brain --sim flybody --device
+ditoo --viewer`): silence leaves the map dark, talking scatters activity through
+the head, and a clap lights both antennal regions and fires the giant fibre,
+which the readout turns into an escape and the body into a hop on the panel. The
+brain runs at 0.2x real time while sharing the host with MuJoCo (0.27x alone).
