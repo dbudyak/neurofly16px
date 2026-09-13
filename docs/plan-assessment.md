@@ -84,6 +84,13 @@ The revised `PLAN.md` incorporates every decision below.
    **2026-09-13:** the owner asked for that option to be planned; it is now
    `docs/plans/2026-09-13-phase7-flight.md` (Phase 7). The hop in place stays
    until that phase runs.
+   **2026-09-13, later:** superseded by
+   `docs/plans/2026-09-13-phase7-box-world.md` and built. The owner wanted flight
+   that looks like a real fly -- "somewhat random directions with random
+   trajectories" -- rather than a replayed clip, so flight is a kinematic model of
+   saccadic flight (straight segments, 30-150 degree body saccades, walls she
+   lands on or veers off) and not flybody dynamics. Walking remains the real
+   model; the new world layer only decides which surface it happens on.
 
 7. **Ditoo image command.** Pixoo / Timebox Evo / Ditoo Mic accept `0x44`
    (single image) and `0x49` (animation); Ditoo Pro uses `0x8b`. The original

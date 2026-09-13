@@ -112,7 +112,7 @@ equivalent, written but untested — this host runs systemd.
 
 ## Status
 
-Phases 0–6 running end to end; Phase 4's thresholds still want one calibration session.
+Phases 0–7 running end to end; Phase 4's thresholds still want one calibration session.
 
 - **Phase 0** (host verification): both `uv` environments exist, the pretrained
   walking policy is exported to numpy and reproduces TensorFlow to 3e-6, the fly
@@ -165,6 +165,13 @@ Phases 0–6 running end to end; Phase 4's thresholds still want one calibration
   runs at ~0.25x real time on an RTX 3090; the body keeps its own clock and the
   lag is logged. Data, measurements and the design decisions are in
   `docs/banc.md`.
+- **Phase 7** (a box to live in): the panel is a room seen from the side. She
+  walks the floor, climbs the walls and crosses the ceiling upside down, and a
+  startle sends her flying erratically through the whole screen before she lands
+  somewhere else. The walking is still flybody — the world layer only decides
+  which surface it happens on; the flight is an explicit kinematic model of
+  saccadic flight, which is how real flies move between walls
+  (`docs/plans/2026-09-13-phase7-box-world.md`).
 
 [PLAN.md](PLAN.md) is the roadmap; `docs/plan-assessment.md` lists the decisions
 taken and the ones awaiting the owner; `docs/plans/` holds the executable plans
