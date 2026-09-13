@@ -250,3 +250,45 @@ threshold gap, i.e. a neuron would re-excite itself on its own spike.
 
 Output `data/banc_v888.npz`: `indptr` (n+1), `indices`, `weights`
 (sign x synapse count), `ids`, `min_synapses`, `autapses`. 5.3 MB compressed.
+
+## LIF model on the host (2026-09-13, RTX 3090)
+
+`neurofly16px/brain/lif.py`, 144,047 neurons and 1,440,835 edges, dt 0.1 ms.
+
+| propagation | steps/s | real time |
+|---|---|---|
+| event-driven gather of the spiking rows | 945 | 0.09x |
+| same, with the runaway guard removed | 1,224 | 0.12x |
+| **sparse matrix-vector product** | **2,949** | **0.29x** |
+
+The plan assumed event-driven gathering would beat an SpMV. It does not, and the
+reason is not arithmetic: `nonzero()` and reading the gather size force a
+GPU-to-CPU synchronisation on *every* step, while `Wt @ spikes` over 1.4 M edges
+is ~11 MB of traffic and needs none. The wiring is therefore stored twice, CSR by
+presynaptic neuron (for inspection) and CSR by postsynaptic neuron (for the
+SpMV). For the same reason the runaway guard reads the spike count only every
+`guard_every_steps` (50), and the Poisson drive is kept as a dense probability
+vector rather than an index list -- selecting the stimulated neurons gives the
+step a data-dependent shape, which is another sync, and measured *slower* than
+drawing one random number per neuron (2,063 vs 2,897 steps/s).
+
+At 339 us/step the loop is launch-bound, not bandwidth-bound: ~16 elementwise
+kernels over 144k floats. `torch.compile(mode="reduce-overhead")` halves the
+elementwise part (219 -> 110 us) but was not adopted here; 0.29x real time is
+within what PLAN.md 6.5 provides for (the body keeps real time, the brain's lag
+is logged).
+
+### Sanity check (`scripts/bench_brain.py`)
+
+Sugar GRNs stimulated at 100 Hz for one simulated second:
+
+| population | spikes | per neuron | unstimulated control |
+|---|---|---|---|
+| proboscis motor neurons | 80 | 2.3 Hz | 0 |
+| descending, walking cluster | 126 | 0.6 Hz | 0 |
+| all descending neurons | 546 | 0.4 Hz | 0 |
+| Johnston's organ, sound, left | 0 | 0.0 Hz | 0 |
+
+Taste drives the proboscis motor neurons it should, does not touch the auditory
+neurons it should not, and the resting network is silent. No runaway: the
+FAFB-tuned `w_syn` of 0.275 mV holds on brain + nerve cord at `min_synapses` 5.

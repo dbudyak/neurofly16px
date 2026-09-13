@@ -171,6 +171,41 @@ class StagesConfig:
 
 
 @dataclass(frozen=True)
+class BrainConfig:
+    """Shiu et al. 2024 leaky integrate-and-fire parameters (docs/banc.md)."""
+
+    connectome_path: str = "data/banc_v888.npz"
+    anatomy_path: str = "data/banc_anatomy.npz"
+    populations_path: str = "data/populations.json"
+    device: str = "cuda"
+    """Falls back to the CPU when CUDA is unavailable."""
+    dt_ms: float = 0.1
+    v_0: float = -52.0
+    """Resting potential, mV."""
+    v_rst: float = -52.0
+    v_th: float = -45.0
+    t_mbr_ms: float = 20.0
+    """Membrane time constant."""
+    tau_ms: float = 5.0
+    """Synaptic (alpha) time constant."""
+    t_rfc_ms: float = 2.2
+    """Refractory period."""
+    t_dly_ms: float = 1.8
+    """Synaptic delay."""
+    w_syn: float = 0.275
+    """mV per synapse; the model's only free parameter, tuned by Shiu et al. on FAFB."""
+    weight_scale: float = 1.0
+    """Global multiplier on w_syn; halved automatically if the network runs away."""
+    max_spike_fraction: float = 0.05
+    """Fraction of neurons spiking in one step that counts as runaway excitation."""
+    min_runaway_spikes: int = 100
+    """...but never call a handful of neurons a runaway, whatever fraction they are."""
+    guard_every_steps: int = 50
+    """Steps between runaway checks; each check reads the GPU, which costs a sync."""
+    seed: int = 0
+
+
+@dataclass(frozen=True)
 class Config:
     stages: StagesConfig = field(default_factory=StagesConfig)
     loop: LoopConfig = field(default_factory=LoopConfig)
@@ -178,6 +213,7 @@ class Config:
     fsm: FsmConfig = field(default_factory=FsmConfig)
     wander: WanderConfig = field(default_factory=WanderConfig)
     night: NightConfig = field(default_factory=NightConfig)
+    brain: BrainConfig = field(default_factory=BrainConfig)
     stub_sim: StubSimConfig = field(default_factory=StubSimConfig)
     hop: HopConfig = field(default_factory=HopConfig)
     render: RenderConfig = field(default_factory=RenderConfig)
