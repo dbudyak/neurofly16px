@@ -92,6 +92,16 @@ class DitooDisplay:
             self.frames_dropped += 1
             self._drop_link()
 
+    def set_brightness(self, level: int) -> None:
+        """Change the panel brightness on a live link; ignored while disconnected."""
+        if self._sock is None:
+            return
+        try:
+            self._sock.sendall(p.brightness_packet(level))
+        except OSError as exc:
+            log.warning("Ditoo brightness failed (%s); dropping link", exc)
+            self._drop_link()
+
     def status(self) -> dict[str, int] | None:
         if self._sock is None:
             return None

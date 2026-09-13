@@ -16,7 +16,9 @@ from neurofly16px.behavior.fsm import FsmBehavior
 from neurofly16px.behavior.scripted import ScriptedBehavior
 from neurofly16px.behavior.wander import WanderBehavior
 from neurofly16px.config import Config, find_config, load_config
+from neurofly16px.device.base import Display
 from neurofly16px.device.ppm import PpmDisplay
+from neurofly16px.device.schedule import ScheduledDisplay
 from neurofly16px.device.terminal import TerminalDisplay
 from neurofly16px.device.worker import DisplayWorker
 from neurofly16px.record import Recorder
@@ -60,6 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--image-cmd", choices=("44", "49", "8b"), default=None)
     r.add_argument("--view", choices=VIEW, default=None, help="default: config render.view")
     r.add_argument("--record", type=Path, default=None, help="write frames and states to an npz")
+    r.add_argument(
+        "--night",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="dark panel during the configured night hours (default: config night.enabled)",
+    )
     r.add_argument(
         "--dry-run",
         action="store_true",
@@ -117,9 +125,9 @@ def build_stages(
     view = args.view or cfg.render.view
     render_cfg = dataclasses.replace(cfg.render, view=view)
     renderer: Renderer = SideRenderer(render_cfg) if view == "side" else SpriteRenderer(render_cfg)
-    display: DisplayWorker
+    inner: Display
     if args.device == "terminal":
-        display = DisplayWorker(TerminalDisplay())
+        inner = TerminalDisplay()
     elif args.device == "ditoo":
         from neurofly16px.device.ditoo import DitooDisplay
 
@@ -128,9 +136,13 @@ def build_stages(
             mac=args.mac or cfg.ditoo.mac,
             image_cmd=args.image_cmd or cfg.ditoo.image_cmd,
         )
-        display = DisplayWorker(DitooDisplay(dc))
+        inner = DitooDisplay(dc)
     else:
-        display = DisplayWorker(PpmDisplay(args.frames_dir))
+        inner = PpmDisplay(args.frames_dir)
+    night = cfg.night if args.night is None else dataclasses.replace(cfg.night, enabled=args.night)
+    if night.enabled:
+        inner = ScheduledDisplay(inner, night)
+    display = DisplayWorker(inner)
     return audio, behavior, sim, renderer, display
 
 

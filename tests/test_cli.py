@@ -131,3 +131,29 @@ def test_flags_still_beat_the_config(tmp_path: Path, monkeypatch) -> None:
         ]
     )
     assert rc == 0 and list((tmp_path / "g").glob("*.ppm"))
+
+
+def test_night_flag_wraps_the_display(tmp_path: Path, monkeypatch) -> None:
+    from neurofly16px import cli
+    from neurofly16px.config import Config
+    from neurofly16px.device.schedule import ScheduledDisplay
+
+    monkeypatch.chdir(tmp_path)
+    args = build_parser().parse_args(
+        ["run", "--device", "ppm", "--frames-dir", str(tmp_path), "--night"]
+    )
+    *_, display = cli.build_stages(args, Config())
+    assert isinstance(display.display, ScheduledDisplay)
+
+
+def test_no_night_leaves_the_display_bare(tmp_path: Path, monkeypatch) -> None:
+    from neurofly16px import cli
+    from neurofly16px.config import Config
+    from neurofly16px.device.ppm import PpmDisplay
+
+    monkeypatch.chdir(tmp_path)
+    args = build_parser().parse_args(
+        ["run", "--device", "ppm", "--frames-dir", str(tmp_path), "--no-night"]
+    )
+    *_, display = cli.build_stages(args, Config())
+    assert isinstance(display.display, PpmDisplay)

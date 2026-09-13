@@ -118,6 +118,19 @@ class FsmConfig:
 
 
 @dataclass(frozen=True)
+class NightConfig:
+    """Local-time window in which the panel goes dark."""
+
+    enabled: bool = True
+    start: float = 23.0
+    """Hour the panel goes dark, local time; the window may wrap past midnight."""
+    end: float = 7.0
+    brightness: int = 0
+    day_brightness: int = 60
+    """Restored when the window ends; keep it in step with `ditoo.brightness`."""
+
+
+@dataclass(frozen=True)
 class WanderConfig:
     """The no-audio fallback: a slow random walk."""
 
@@ -164,6 +177,7 @@ class Config:
     audio: AudioConfig = field(default_factory=AudioConfig)
     fsm: FsmConfig = field(default_factory=FsmConfig)
     wander: WanderConfig = field(default_factory=WanderConfig)
+    night: NightConfig = field(default_factory=NightConfig)
     stub_sim: StubSimConfig = field(default_factory=StubSimConfig)
     hop: HopConfig = field(default_factory=HopConfig)
     render: RenderConfig = field(default_factory=RenderConfig)

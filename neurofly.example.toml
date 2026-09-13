@@ -42,3 +42,15 @@ startle_cooldown_s = 3.0
 policy_path = "data/policy_walking.npz"
 v_max_cm_s = 2.0
 w_max_rad_s = 2.0
+
+[night]
+enabled = true
+start = 23.0           # local hour the panel goes dark (the window may wrap midnight)
+end = 7.0
+brightness = 0
+day_brightness = 60    # restored in the morning; keep in step with ditoo.brightness
+
+[wander]
+# What she does when no audio arrives at all (no mic, or it died).
+forward = 0.5
+turn_amount = 0.35
