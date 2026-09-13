@@ -9,6 +9,16 @@ import numpy as np
 
 Mode = Literal["idle", "walk", "fly"]
 
+Surface = Literal["floor", "right", "ceiling", "left", "air"]
+"""Which face of the box the fly is on; "air" means in flight.
+
+Flies walk on walls and ceilings, so the panel is a room seen from the side
+rather than a floor with sky above it (docs/plans/2026-09-13-phase7-box-world.md).
+"""
+
+SURFACES: tuple[Surface, ...] = ("floor", "right", "ceiling", "left")
+"""The four walkable faces, counter-clockwise from the bottom."""
+
 LEG_NAMES: tuple[str, ...] = ("T1_left", "T1_right", "T2_left", "T2_right", "T3_left", "T3_right")
 
 
@@ -51,6 +61,11 @@ class FlyState:
     """Foot contact per leg, ordered as LEG_NAMES."""
     wing_phase: float
     """0..1, meaningful only while airborne."""
+    surface: Surface = "floor"
+    """Which face she is attached to; "air" while flying.
+
+    Defaults to the floor, which is what a flat-ground sim produces on its own.
+    """
 
 
 Frame = np.ndarray

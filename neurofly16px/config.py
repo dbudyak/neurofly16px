@@ -37,6 +37,33 @@ class HopConfig:
 
 
 @dataclass(frozen=True)
+class WorldConfig:
+    """The box the fly lives in: floor, two walls and a ceiling, seen from the side."""
+
+    enabled: bool = True
+    box_cm: float = 4.0
+    """Side of the square box, so a panel pixel is the same size in both directions."""
+    corner_turn_bias: float = 0.45
+    """Turn command above which she turns back at a corner instead of carrying on around."""
+    reverse_turn: float = 0.7
+    """Turn command that reverses her direction mid-surface."""
+    reverse_dwell_s: float = 0.6
+    """...held for this long, so a passing turn does not spin her."""
+
+    # Flight: straight segments broken by body saccades, as free-flying flies do.
+    # Both are scaled to a 4 cm box: a fly crosses it in a fifth of a second at
+    # open-air speeds, which leaves no room for a saccade between the walls.
+    flight_speed_cm_s: tuple[float, float] = (8.0, 20.0)
+    saccade_interval_s: tuple[float, float] = (0.05, 0.2)
+    saccade_deg: tuple[float, float] = (30.0, 150.0)
+    land_chance: float = 0.35
+    """Probability of landing rather than turning away when she reaches a surface."""
+    flight_seconds: tuple[float, float] = (0.8, 2.5)
+    """After this she lands at the next surface she touches."""
+    takeoff_speed_cm_s: float = 18.0
+
+
+@dataclass(frozen=True)
 class RenderConfig:
     view: str = "side"
     """"side" (the fly walks along the bottom of the panel, seen from the side) or "top"."""
@@ -260,6 +287,7 @@ class BrainConfig:
 class Config:
     stages: StagesConfig = field(default_factory=StagesConfig)
     loop: LoopConfig = field(default_factory=LoopConfig)
+    world: WorldConfig = field(default_factory=WorldConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
     fsm: FsmConfig = field(default_factory=FsmConfig)
     wander: WanderConfig = field(default_factory=WanderConfig)

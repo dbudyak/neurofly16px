@@ -28,6 +28,7 @@ from neurofly16px.render.side import SideRenderer
 from neurofly16px.render.sprite import SpriteRenderer
 from neurofly16px.sim.base import FlySim
 from neurofly16px.sim.stub import StubSim
+from neurofly16px.sim.world import SurfaceWorld, WorldSim
 
 log = logging.getLogger(__name__)
 
@@ -149,7 +150,13 @@ def build_stages(
         sim = StubSim(cfg.stub_sim, cfg.hop)
     view = args.view or cfg.render.view
     render_cfg = dataclasses.replace(cfg.render, view=view)
-    renderer: Renderer = SideRenderer(render_cfg) if view == "side" else SpriteRenderer(render_cfg)
+    if cfg.world.enabled and view == "side":
+        sim = WorldSim(sim, SurfaceWorld(cfg.world))
+    renderer: Renderer
+    if view == "side":
+        renderer = SideRenderer(render_cfg, box_cm=cfg.world.box_cm if cfg.world.enabled else None)
+    else:
+        renderer = SpriteRenderer(render_cfg)
     inner: Display
     if args.device == "terminal":
         inner = TerminalDisplay()

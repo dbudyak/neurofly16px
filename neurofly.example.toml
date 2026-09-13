@@ -64,3 +64,10 @@ viewer_port = 8765
 window_ms = 20.0
 giant_fibre_hz = 60.0  # escape threshold on DNp01
 drive_hz = 2.0         # mean descending rate that means "full speed"
+
+[world]
+# The box she lives in: floor, two walls, a ceiling (side view only).
+enabled = true
+box_cm = 4.0           # square, so a pixel is the same size in both directions
+corner_turn_bias = 0.45  # turn command above which she turns back instead of climbing
+land_chance = 0.35       # chance of landing rather than veering off, per wall touch

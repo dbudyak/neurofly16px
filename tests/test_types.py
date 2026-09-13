@@ -36,3 +36,20 @@ def test_fly_state_leg_order() -> None:
 def test_constants() -> None:
     assert t.SILENCE.rms == 0.0 and t.SILENCE.onset is False and t.SILENCE.direction is None
     assert t.IDLE.mode == "idle"
+
+
+def test_surface_defaults_to_the_floor() -> None:
+    fly = t.FlyState(
+        t=0.0,
+        x=0.0,
+        y=0.0,
+        z=0.0,
+        heading=0.0,
+        speed=0.0,
+        airborne=False,
+        legs_down=(True,) * 6,
+        wing_phase=0.0,
+    )
+    assert fly.surface == "floor", "a flat-ground sim needs to say nothing"
+    assert t.SURFACES == ("floor", "right", "ceiling", "left")
+    assert "air" not in t.SURFACES, "air is a state, not a walkable face"
