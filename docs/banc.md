@@ -175,3 +175,41 @@ drive; absolute rates are not meaningful, differences between conditions are.
 3. Soma-position column and units (`position` is voxel xyz as a string in the
    CSVs; `root_position_nm` exists too); choose the 2-D projection for the
    heat map after plotting once.
+
+## Host results (2026-09-13, from the public tables)
+
+`scripts/fetch_banc.sh` + `scripts/build_anatomy.py` on `banc_888_meta_20260521.parquet`
+(188,508 rows x 165 columns) and `banc_neck_functional_classes.csv` (3,161 rows).
+
+**Correction to the notes above:** the Johnston's-organ labels are in
+**`cell_sub_class`**, not `cell_class` — for these neurons `cell_class` is
+`chordotonal_organ_neuron`. Likewise the sugar GRNs carry their receptors in
+`cell_function_detailed` (`"sugar, Gr5a"`, `"sugar, Gr43a, Gr64f, Gr5a"`, ...),
+so `cell_function == "sugar"` matches nothing.
+
+Filters: 159,876 neurons have a `super_class`, 155,937 are proofread or roughly
+proofread, **144,047 are both** and are kept. 27,497 of those have no soma
+position and are dropped from the map (never binned at the origin).
+
+Transmitter signs: 95,789 excitatory, 48,258 inhibitory, 3,464 unknown and
+assumed excitatory.
+
+| population | count | selector |
+|---|---|---|
+| JO sound (A + B) | 200 left, 250 right | `cell_sub_class`, by `side` |
+| JO wind (C + E) | 230 left, 224 right | `cell_sub_class`, by `side` |
+| descending neurons | 1,316 | `super_class == descending` |
+| DN walking / takeoff-landing / threat / head-orienting | 218 / 253 / 135 / 511 | neck `super_cluster` |
+| DN flight steering 1 / 2 | 91 / 211 | neck `super_cluster` |
+| named DNs (DNp01, DNa02, MDN, DNp09, DNa01, DNb01, DNg13) | 1-2 per side | `cell_type` |
+| sugar GRNs | 537 | `cell_function_detailed` starts with `sugar` |
+| proboscis motor neurons | 35 | `cell_class` |
+
+Per-class JO counts (both sides): JO-A 93, JO-B 417, JO-C 53, JO-D 13, JO-E 409,
+JO-F 187, other 21.
+
+**Projection for the heat map.** y is the body axis: mean soma y is 149 um
+(central brain), 157 um (optic lobe) and 778 um (ventral nerve cord), against a
+19 um difference in x. So the map projects x against y, unflipped, which draws
+the fly head-up with the nerve cord below. Soma extent: x 83-921 um, y 39-1034
+um, z 1-315 um.

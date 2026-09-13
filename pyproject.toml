@@ -40,4 +40,5 @@ markers = [
     "flybody: needs the flybody stack (skipped when not importable)",
     "policy: needs data/policy_walking.npz",
     "hardware: needs the Ditoo",
+    "brain: needs the BANC tables (scripts/fetch_banc.sh, scripts/build_anatomy.py)",
 ]
