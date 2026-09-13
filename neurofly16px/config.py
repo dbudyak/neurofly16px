@@ -113,6 +113,19 @@ class FsmConfig:
     idle_turn_amount: float = 0.4
     drift_turn_amount: float = 0.15
     """Random heading drift while walking without a direction estimate."""
+    no_audio_timeout_s: float = 5.0
+    """With no fresh audio for this long, hand over to the wander behaviour."""
+
+
+@dataclass(frozen=True)
+class WanderConfig:
+    """The no-audio fallback: a slow random walk."""
+
+    forward: float = 0.5
+    turn_amount: float = 0.35
+    leg_min_s: float = 2.0
+    leg_max_s: float = 6.0
+    pause_chance: float = 0.25
 
 
 @dataclass(frozen=True)
@@ -150,6 +163,7 @@ class Config:
     loop: LoopConfig = field(default_factory=LoopConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
     fsm: FsmConfig = field(default_factory=FsmConfig)
+    wander: WanderConfig = field(default_factory=WanderConfig)
     stub_sim: StubSimConfig = field(default_factory=StubSimConfig)
     hop: HopConfig = field(default_factory=HopConfig)
     render: RenderConfig = field(default_factory=RenderConfig)

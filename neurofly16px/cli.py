@@ -14,6 +14,7 @@ from neurofly16px.audio.stub import StubAudio
 from neurofly16px.behavior.base import Behavior
 from neurofly16px.behavior.fsm import FsmBehavior
 from neurofly16px.behavior.scripted import ScriptedBehavior
+from neurofly16px.behavior.wander import WanderBehavior
 from neurofly16px.config import Config, find_config, load_config
 from neurofly16px.device.ppm import PpmDisplay
 from neurofly16px.device.terminal import TerminalDisplay
@@ -28,7 +29,7 @@ from neurofly16px.sim.stub import StubSim
 log = logging.getLogger(__name__)
 
 AUDIO = ("stub", "mic", "pipewire", "portaudio")
-BEHAVIOR = ("scripted", "fsm")
+BEHAVIOR = ("scripted", "fsm", "wander")
 SIM = ("stub", "flybody")
 DEVICE = ("terminal", "ppm", "ditoo")
 VIEW = ("side", "top")
@@ -93,7 +94,13 @@ def build_stages(
     args: argparse.Namespace, cfg: Config
 ) -> tuple[AudioSource, Behavior, FlySim, Renderer, DisplayWorker]:
     audio: AudioSource = StubAudio(None) if args.audio == "stub" else build_mic(args, cfg)
-    behavior: Behavior = FsmBehavior(cfg.fsm) if args.behavior == "fsm" else ScriptedBehavior()
+    behavior: Behavior
+    if args.behavior == "fsm":
+        behavior = FsmBehavior(cfg.fsm, wander=WanderBehavior(cfg.wander))
+    elif args.behavior == "wander":
+        behavior = WanderBehavior(cfg.wander)
+    else:
+        behavior = ScriptedBehavior()
     sim: FlySim
     if args.sim == "flybody":
         # imported lazily so `--sim stub` never pulls in MuJoCo

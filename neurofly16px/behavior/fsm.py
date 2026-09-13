@@ -18,7 +18,8 @@ import time
 from collections.abc import Callable
 from typing import Literal
 
-from neurofly16px.config import FsmConfig
+from neurofly16px.behavior.wander import WanderBehavior
+from neurofly16px.config import FsmConfig, WanderConfig
 from neurofly16px.types import AudioFeatures, FlyState, SteeringCommand
 
 log = logging.getLogger(__name__)
@@ -32,10 +33,15 @@ class FsmBehavior:
         cfg: FsmConfig,
         clock: Callable[[], float] = time.monotonic,
         rng: random.Random | None = None,
+        wander: WanderBehavior | None = None,
     ) -> None:
         self._cfg = cfg
         self._clock = clock
         self._rng = rng or random.Random()
+        self._wander = wander or WanderBehavior(WanderConfig(), clock=clock, rng=self._rng)
+        self._last_audio_t: float | None = None
+        self._last_audio_seen = clock()
+        self._deaf = False
         now = clock()
         self._state: State = "idle"
         self._loud_since: float | None = None
@@ -53,9 +59,10 @@ class FsmBehavior:
         return self._state
 
     def update(self, audio: AudioFeatures, fly: FlyState) -> SteeringCommand:
-        del fly  # the FSM reacts to sound only; the body state is unused for now
         now = self._clock()
         cfg = self._cfg
+        if self._audio_is_stale(audio, now):
+            return self._wander.update(audio, fly)
         self._track_loudness(audio, now)
 
         if self._should_startle(audio, now):
@@ -95,6 +102,17 @@ class FsmBehavior:
                 "mono" if audio.direction is None else f"{audio.direction:+.2f}",
             )
         self._state = state
+
+    def _audio_is_stale(self, audio: AudioFeatures, now: float) -> bool:
+        """True when no new audio block has arrived for `no_audio_timeout_s`."""
+        if audio.t != self._last_audio_t:
+            self._last_audio_t = audio.t
+            self._last_audio_seen = now
+        stale = now - self._last_audio_seen >= self._cfg.no_audio_timeout_s
+        if stale != self._deaf:
+            log.info("audio %s", "lost; wandering" if stale else "back; listening")
+            self._deaf = stale
+        return stale
 
     def _track_loudness(self, audio: AudioFeatures, now: float) -> None:
         if audio.rms > self._cfg.t_walk:

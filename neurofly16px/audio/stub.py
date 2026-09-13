@@ -31,7 +31,9 @@ class StubAudio:
     def latest(self) -> AudioFeatures:
         now = self._clock()
         if not self._script:
-            return SILENCE
+            # a timestamp, not the frozen SILENCE constant: this is a working
+            # device reporting a quiet room, not a missing one
+            return dataclasses.replace(SILENCE, t=now)
         elapsed = (now - self._t0) % self._period
         for duration, features in self._script:
             if elapsed < duration:

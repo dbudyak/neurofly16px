@@ -3,9 +3,12 @@ from neurofly16px.types import SILENCE, AudioFeatures
 
 
 def test_silence_by_default() -> None:
+    """A quiet room, timestamped: the FSM treats a frozen timestamp as a dead device."""
     a = StubAudio(None, clock=lambda: 3.0)
     a.start()
-    assert a.latest() == SILENCE
+    quiet = a.latest()
+    assert (quiet.rms, quiet.onset, quiet.direction) == (0.0, False, None)
+    assert quiet.t == 3.0
     a.stop()
 
 
