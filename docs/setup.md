@@ -144,3 +144,23 @@ Two findings:
   `idle -> walk` transition fired from loudness alone. It is not yet clear
   whether that is the threshold or simply what was in the room; re-run
   `scripts/audio_probe.py` while talking to decide before changing `t_walk`.
+
+## Running it outside a development session
+
+`neurofly run` with no flags reads `neurofly.toml` from the working directory,
+falling back to `$XDG_CONFIG_HOME/neurofly16px/neurofly.toml`; the path it chose
+is logged at startup. `neurofly.toml` is git-ignored (it holds the device MAC and
+the microphone node); `neurofly.example.toml` is the committed template. The
+`[stages]` table decides which audio source, behaviour, sim and device are used
+when the matching flag is absent.
+
+The installed entry point is `.venv/bin/neurofly`, so the service does not need
+`uv`:
+
+    systemctl --user enable --now neurofly    # contrib/neurofly.service
+    systemctl --user stop neurofly
+    journalctl --user -u neurofly -f
+
+It must be a **user** unit: the microphone comes from the user's PipeWire
+session, which a system unit cannot see. `MUJOCO_GL` does not need to be set —
+nothing in the pipeline renders through MuJoCo.

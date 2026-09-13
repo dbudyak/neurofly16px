@@ -1,0 +1,31 @@
+# systemd *user* service: it needs the user's PipeWire session for the
+# microphone, so it must not run as a system unit.
+#
+#   mkdir -p ~/.config/systemd/user
+#   ln -s ~/dev/neurofly16px/contrib/neurofly.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now neurofly     # start now and at login
+#   systemctl --user stop neurofly             # stop
+#   systemctl --user status neurofly
+#   journalctl --user -u neurofly -f           # follow the log
+#
+# Edit WorkingDirectory below if the checkout lives somewhere else; the
+# settings themselves come from neurofly.toml in that directory.
+
+[Unit]
+Description=neurofly16px - a simulated fruit fly on a Divoom Ditoo
+Documentation=https://github.com/dbudyak/neurofly16px
+After=bluetooth.target pipewire.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/dev/neurofly16px
+ExecStart=%h/dev/neurofly16px/.venv/bin/neurofly run
+Restart=on-failure
+RestartSec=5
+# The Ditoo driver reconnects on its own, so a missing device is not a failure.
+SuccessExitStatus=0
+Nice=5
+
+[Install]
+WantedBy=default.target

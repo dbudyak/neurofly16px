@@ -1,0 +1,28 @@
+#!/sbin/openrc-run
+# OpenRC alternative to contrib/neurofly.service, for hosts without systemd.
+# Untested: this host runs systemd (docs/setup.md). The microphone needs the
+# user's audio session, so run it as that user, not as root.
+#
+#   sudo cp contrib/neurofly.openrc /etc/init.d/neurofly
+#   sudo rc-update add neurofly default
+#   sudo rc-service neurofly start | stop | status
+
+name="neurofly"
+description="A simulated fruit fly on a Divoom Ditoo"
+
+: ${neurofly_user:="dima"}
+: ${neurofly_dir:="/home/${neurofly_user}/dev/neurofly16px"}
+
+command="${neurofly_dir}/.venv/bin/neurofly"
+command_args="run"
+command_background=true
+command_user="${neurofly_user}"
+directory="${neurofly_dir}"
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/${RC_SVCNAME}.log"
+error_log="/var/log/${RC_SVCNAME}.log"
+
+depend() {
+    need bluetooth
+    after dbus
+}

@@ -101,3 +101,33 @@ def test_audio_device_falls_back_to_config() -> None:
     source = cli.build_mic(args, cfg)
     assert isinstance(source, PipeWireAudio)
     assert "from.config" in command(cfg.audio, source._device, 20)
+
+
+def test_config_chooses_the_stages_when_flags_are_absent(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "neurofly.toml").write_text(
+        '[stages]\ndevice = "ppm"\nbehavior = "fsm"\n[loop]\nfps = 4\n'
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "empty"))
+    assert main(["run", "--seconds", "0.5", "--frames-dir", str(tmp_path / "f")]) == 0
+    assert list((tmp_path / "f").glob("*.ppm"))
+
+
+def test_flags_still_beat_the_config(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "neurofly.toml").write_text('[stages]\ndevice = "ditoo"\n')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "empty"))
+    rc = main(
+        [
+            "run",
+            "--device",
+            "ppm",
+            "--frames-dir",
+            str(tmp_path / "g"),
+            "--seconds",
+            "0.3",
+            "--fps",
+            "4",
+        ]
+    )
+    assert rc == 0 and list((tmp_path / "g").glob("*.ppm"))

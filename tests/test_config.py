@@ -32,3 +32,32 @@ def test_unknown_section_is_an_error(tmp_path: Path) -> None:
     f.write_text("[lop]\nfps = 12\n")
     with pytest.raises(ValueError, match="lop"):
         c.load_config(f)
+
+
+def test_find_config_prefers_the_explicit_path(tmp_path: Path) -> None:
+    explicit = tmp_path / "custom.toml"
+    explicit.write_text("")
+    assert c.find_config(explicit) == explicit
+
+
+def test_find_config_picks_up_the_working_directory(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "neurofly.toml").write_text("")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "empty"))
+    assert c.find_config(None) == tmp_path / "neurofly.toml"
+
+
+def test_find_config_falls_back_to_xdg(tmp_path: Path, monkeypatch) -> None:
+    xdg = tmp_path / "config"
+    (xdg / "neurofly16px").mkdir(parents=True)
+    wanted = xdg / "neurofly16px" / "neurofly.toml"
+    wanted.write_text("")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg))
+    assert c.find_config(None) == wanted
+
+
+def test_find_config_returns_none_when_there_is_nothing(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "empty"))
+    assert c.find_config(None) is None

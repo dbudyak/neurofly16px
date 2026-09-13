@@ -53,6 +53,47 @@ Each stage is a separate module with a plain dataclass interface, so any stage c
 - Divoom Ditoo (original, 16×16). USB-C is charge-only; all control is over Bluetooth Classic SPP/RFCOMM.
 - Any USB/onboard microphone. The Ditoo's own mic is not assumed to be reachable over the protocol.
 
+## Running it
+
+Settings live in `neurofly.toml` (copy `neurofly.example.toml`, edit the Ditoo
+MAC and the microphone node). `neurofly run` reads it from the working directory,
+or from `~/.config/neurofly16px/neurofly.toml`, so the command line stays empty
+for the normal case.
+
+```sh
+uv sync --extra dev --extra audio     # once
+cp neurofly.example.toml neurofly.toml && $EDITOR neurofly.toml
+
+uv run neurofly run                   # start; Ctrl-C stops it
+uv run neurofly run --device terminal # same fly, in the terminal instead
+uv run neurofly run --sim stub --seconds 30   # quick check, no MuJoCo
+```
+
+Every setting has a flag that overrides the file: `--sim`, `--device`,
+`--audio`, `--behavior`, `--view`, `--fps`, `--mac`, `--audio-device`,
+`--seconds`, `--log-level`.
+
+### As a background service
+
+The microphone needs the user's PipeWire session, so this is a **user** unit,
+not a system one:
+
+```sh
+mkdir -p ~/.config/systemd/user
+ln -s ~/dev/neurofly16px/contrib/neurofly.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+
+systemctl --user enable --now neurofly   # start now, and at every login
+systemctl --user stop neurofly           # stop
+systemctl --user restart neurofly        # after editing neurofly.toml
+systemctl --user status neurofly
+journalctl --user -u neurofly -f         # follow what she is doing
+```
+
+It restarts on failure and reconnects to the Ditoo on its own, so switching the
+panel off and on again is fine. `contrib/neurofly.openrc` is the OpenRC
+equivalent, written but untested — this host runs systemd.
+
 ## Status
 
 Phases 0–3 done; Phase 4 built and awaiting a live check.

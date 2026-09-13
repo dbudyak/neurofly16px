@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -134,7 +135,18 @@ class FlybodyConfig:
 
 
 @dataclass(frozen=True)
+class StagesConfig:
+    """Which implementation each stage uses when the CLI flag is absent."""
+
+    audio: str = "stub"
+    behavior: str = "scripted"
+    sim: str = "stub"
+    device: str = "terminal"
+
+
+@dataclass(frozen=True)
 class Config:
+    stages: StagesConfig = field(default_factory=StagesConfig)
     loop: LoopConfig = field(default_factory=LoopConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
     fsm: FsmConfig = field(default_factory=FsmConfig)
@@ -163,6 +175,24 @@ def from_dict[T](cls: type[T], data: dict[str, Any]) -> T:
         else:
             kwargs[name] = value
     return cls(**kwargs)
+
+
+CONFIG_NAME = "neurofly.toml"
+
+
+def find_config(explicit: Path | None = None) -> Path | None:
+    """The config file to use: --config, then ./neurofly.toml, then XDG config.
+
+    Returns None when there is none, in which case the built-in defaults apply.
+    """
+    if explicit is not None:
+        return explicit
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(xdg) if xdg else Path.home() / ".config"
+    for candidate in (Path.cwd() / CONFIG_NAME, base / "neurofly16px" / CONFIG_NAME):
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def load_config(path: Path | None) -> Config:

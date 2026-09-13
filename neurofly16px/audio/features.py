@@ -36,6 +36,7 @@ class FeatureExtractor:
         self._cfg = cfg
         self._block_s = cfg.block_ms / 1000.0
         self._noise = cfg.rms_floor
+        self._first = True
         self._rise = 1.0 - math.exp(-self._block_s / cfg.noise_tau_s)
         window = max(1, round(cfg.median_window_s / self._block_s))
         self._history: deque[float] = deque(maxlen=window)
@@ -68,6 +69,12 @@ class FeatureExtractor:
         return rms > self._cfg.onset_k * max(median, self._cfg.rms_floor)
 
     def _track_noise(self, rms: float) -> None:
+        if self._first:
+            # Seed from the room instead of from silence: rising to the real floor
+            # takes a time constant, and until then every block reads as loud.
+            self._first = False
+            self._noise = max(self._cfg.rms_floor, rms)
+            return
         rate = _NOISE_FALL if rms < self._noise else self._rise
         self._noise = max(self._cfg.rms_floor, self._noise + rate * (rms - self._noise))
 

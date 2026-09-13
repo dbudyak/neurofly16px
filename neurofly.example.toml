@@ -1,32 +1,44 @@
+# Copy to neurofly.toml (git-ignored) and edit. `neurofly run` picks it up from
+# the working directory, or from ~/.config/neurofly16px/neurofly.toml.
+
+[stages]
+# What `neurofly run` uses when the matching flag is absent.
+audio = "mic"          # stub | mic | pipewire | portaudio
+behavior = "fsm"       # scripted | fsm
+sim = "flybody"        # stub | flybody
+device = "ditoo"       # terminal | ppm | ditoo
+
 [loop]
-fps = 16
+fps = 16               # measured smooth on the Ditoo
 behavior_hz = 50
 
 [render]
-arena_cm = 8.0
+view = "side"          # side | top
+arena_cm = 8.0         # world width mapped across the 16 columns
+height_cm = 2.0        # world height mapped across the 16 rows
+show_ground = true
 
 [ditoo]
-mac = "B1:21:81:B9:E9:48"
-channel = 0          # 0 = resolve from SDP (our unit answers on 2)
-image_cmd = "44"     # verified on hardware in Phase 0
+mac = "XX:XX:XX:XX:XX:XX"
+channel = 0            # 0 = resolve the serial-port channel from SDP
+image_cmd = "44"
 brightness = 60
 settle_s = 1.5
 
-[flybody]
-policy_path = "data/policy_walking.npz"
-v_max_cm_s = 2.0
-w_max_rad_s = 2.0
-leash_cm = 0.15
-
 [audio]
-# `pactl list short sources`; empty means the PipeWire default source, which on
-# this host captures nothing -- name the real microphone node.
-device = "alsa_input.usb-M-Audio_M-Audio_Uber_Mic-01.analog-stereo"
+# `pactl list short sources`; empty means the PipeWire default source.
+device = ""
 samplerate = 16000
 block_ms = 20
 channels = 2
 
 [fsm]
-t_walk = 0.15
-t_idle = 0.08
-t_startle = 0.45
+t_walk = 0.15          # loudness that starts her walking
+t_idle = 0.08          # below this for idle_dwell_s and she stops
+t_startle = 0.45       # a transient this loud makes her hop
+startle_cooldown_s = 3.0
+
+[flybody]
+policy_path = "data/policy_walking.npz"
+v_max_cm_s = 2.0
+w_max_rad_s = 2.0

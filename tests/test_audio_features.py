@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from neurofly16px.audio.features import FeatureExtractor
 from neurofly16px.config import AudioConfig
@@ -104,3 +105,13 @@ def test_tiny_channel_difference_is_not_a_bearing() -> None:
     fx = FeatureExtractor(CFG)
     assert fx.push(tone(0.2, balance=1.01), t=0.0).direction is None
     assert fx.push(tone(0.2, balance=1.2), t=0.02).direction is not None
+
+
+def test_the_first_block_sets_the_noise_floor() -> None:
+    """Starting from silence would make the room read as loud for a whole time constant."""
+    fx = FeatureExtractor(CFG)
+    first = fx.push(tone(AMBIENT), t=0.0)
+    assert first.rms == 0.0
+    assert fx.noise == pytest.approx(AMBIENT, rel=0.01)
+    # a real sound right after still registers
+    assert fx.push(tone(0.05), t=0.02).rms > 0.5

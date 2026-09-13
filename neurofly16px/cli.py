@@ -14,7 +14,7 @@ from neurofly16px.audio.stub import StubAudio
 from neurofly16px.behavior.base import Behavior
 from neurofly16px.behavior.fsm import FsmBehavior
 from neurofly16px.behavior.scripted import ScriptedBehavior
-from neurofly16px.config import Config, load_config
+from neurofly16px.config import Config, find_config, load_config
 from neurofly16px.device.ppm import PpmDisplay
 from neurofly16px.device.terminal import TerminalDisplay
 from neurofly16px.device.worker import DisplayWorker
@@ -37,15 +37,20 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="neurofly")
     sub = p.add_subparsers(dest="command", required=True)
     r = sub.add_parser("run", help="run the pipeline")
-    r.add_argument("--audio", choices=AUDIO, default="stub")
-    r.add_argument("--behavior", choices=BEHAVIOR, default="scripted")
-    r.add_argument("--sim", choices=SIM, default="stub")
-    r.add_argument("--device", choices=DEVICE, default="terminal")
+    r.add_argument("--audio", choices=AUDIO, default=None)
+    r.add_argument("--behavior", choices=BEHAVIOR, default=None)
+    r.add_argument("--sim", choices=SIM, default=None)
+    r.add_argument("--device", choices=DEVICE, default=None)
     r.add_argument(
         "--policy", default=None, help="policy npz (default: config flybody.policy_path)"
     )
     r.add_argument("--audio-device", default=None, help="input device name or index")
-    r.add_argument("--config", type=Path, default=None)
+    r.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="default: ./neurofly.toml, then ~/.config/neurofly16px/neurofly.toml",
+    )
     r.add_argument("--fps", type=float, default=None)
     r.add_argument("--seconds", type=float, default=None)
     r.add_argument("--frames-dir", type=Path, default=Path("frames"))
@@ -126,7 +131,13 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         stream=sys.stderr,
     )
-    cfg = load_config(args.config)
+    config_path = find_config(args.config)
+    if config_path is not None:
+        log.info("config: %s", config_path)
+    cfg = load_config(config_path)
+    for stage in ("audio", "behavior", "sim", "device"):
+        if getattr(args, stage) is None:
+            setattr(args, stage, getattr(cfg.stages, stage))
     loop_cfg = cfg.loop if args.fps is None else dataclasses.replace(cfg.loop, fps=args.fps)
     audio, behavior, sim, renderer, display = build_stages(args, cfg)
     display.start()
