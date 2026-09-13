@@ -1,15 +1,20 @@
 """PCM blocks -> AudioFeatures. Pure numpy, runs in the capture thread.
 
-Loudness is measured *relative to the room*, not normalised to it: a slow
-noise-floor tracker follows the quiet level (fast down, slow up), and anything
-above it is scaled by a fixed reference RMS, so silence reads 0.0 and speech
-reads high. A pure AGC would instead pull any steady level to the middle of the
-range, which makes a quiet room indistinguishable from a conversation — that is
-what the first version did and why it was replaced (`docs/setup.md`, "Audio").
+Loudness is measured *relative to the room*: a slow noise-floor tracker follows
+the quiet level (fast down, slow up), and sound above it is scaled by that same
+floor. Silence reads 0.0, speech reads high, and the numbers mean the same thing
+on a hot microphone and a quiet one -- measured on the host, the same clap can
+arrive 30x louder or quieter depending on the gain knob, which would otherwise
+put every behaviour threshold out of reach (docs/setup.md, "Audio").
+
+A pure AGC was tried first and dropped: normalising by the signal pulls any
+steady level to the middle of the range, so a quiet room looks exactly like a
+conversation.
 
 Onsets are blocks whose RMS stands out against the running median of the last
 second: steady noise (a fan) never fires, a clap does. Direction is the
-inter-channel level difference, only meaningful with two channels.
+inter-channel level difference, only meaningful with two channels far enough
+apart to differ.
 """
 
 from __future__ import annotations
@@ -50,7 +55,8 @@ class FeatureExtractor:
         self._history.append(rms)
         self._track_noise(rms)
         above = rms - self._cfg.noise_margin * self._noise
-        loudness = min(1.0, max(0.0, above / self._cfg.loud_rms))
+        scale = max(self._cfg.loud_rms_min, self._cfg.loud_gain * self._noise)
+        loudness = min(1.0, max(0.0, above / scale))
         return AudioFeatures(t=t, rms=loudness, onset=onset, direction=self._direction(samples))
 
     # --- internals ----------------------------------------------------------

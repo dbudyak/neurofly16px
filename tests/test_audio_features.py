@@ -46,6 +46,24 @@ def test_speech_level_reads_loud_over_the_same_room() -> None:
     assert clap.rms == 1.0 and clap.onset
 
 
+def test_loudness_does_not_depend_on_microphone_gain() -> None:
+    """The same room 30 dB quieter must produce the same numbers.
+
+    Measured on the host: the Uber Mic delivered peaks of 0.06 where a clap
+    should reach 0.5-1.0, which left every FSM threshold out of reach.
+    """
+    readings = []
+    for gain in (1.0, 0.03):
+        fx = FeatureExtractor(CFG)
+        feed(fx, tone(AMBIENT * gain), 30.0)
+        speech = feed(fx, tone(0.03 * gain), 0.2, t0=30.0)
+        clap = fx.push(tone(0.5 * gain), t=31.0)
+        readings.append((speech.rms, clap.rms, clap.onset))
+    assert abs(readings[0][0] - readings[1][0]) < 0.05
+    assert readings[0][1] == readings[1][1] == 1.0
+    assert readings[0][2] and readings[1][2]
+
+
 def test_noise_floor_follows_a_room_that_gets_noisier() -> None:
     fx = FeatureExtractor(CFG)
     feed(fx, tone(AMBIENT), 10.0)

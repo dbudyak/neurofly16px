@@ -64,10 +64,22 @@ class AudioConfig:
     """Rise time of the background-noise tracker; it falls towards quiet in ~0.2 s."""
     noise_margin: float = 1.5
     """How far above the tracked noise floor a block must be to count at all."""
-    loud_rms: float = 0.05
-    """Raw RMS that maps to loudness 1.0. Measured: ambient 0.003, speech ~0.03 (docs/setup.md)."""
-    rms_floor: float = 1e-4
-    """Lower bound on the noise estimate, so digital silence cannot divide by zero."""
+    loud_gain: float = 10.0
+    """Loudness 1.0 sits this many times above the tracked noise floor.
+
+    Scaling against the room rather than a fixed RMS makes the thresholds
+    independent of microphone gain, which varies by tens of dB between devices
+    (docs/setup.md, "Audio").
+    """
+    loud_rms_min: float = 2e-4
+    """Floor on that scale. It only bites in a digitally silent room; a floor near a real
+    room's noise level would undo the gain independence above."""
+    rms_floor: float = 1e-6
+    """Lower bound on the noise estimate, so digital silence cannot divide by zero.
+
+    Keep it near true silence: a floor anywhere near a real room's level would clamp the
+    noise tracker on a quiet microphone and undo the gain independence above.
+    """
     onset_k: float = 3.0
     """A block is an onset when its RMS exceeds k times the running median."""
     median_window_s: float = 1.0
