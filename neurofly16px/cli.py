@@ -31,7 +31,7 @@ from neurofly16px.sim.stub import StubSim
 log = logging.getLogger(__name__)
 
 AUDIO = ("stub", "mic", "pipewire", "portaudio")
-BEHAVIOR = ("scripted", "fsm", "wander")
+BEHAVIOR = ("scripted", "fsm", "wander", "brain")
 SIM = ("stub", "flybody")
 DEVICE = ("terminal", "ppm", "ditoo")
 VIEW = ("side", "top")
@@ -103,7 +103,12 @@ def build_stages(
 ) -> tuple[AudioSource, Behavior, FlySim, Renderer, DisplayWorker]:
     audio: AudioSource = StubAudio(None) if args.audio == "stub" else build_mic(args, cfg)
     behavior: Behavior
-    if args.behavior == "fsm":
+    if args.behavior == "brain":
+        # imported lazily: torch and the connectome are a heavy optional extra
+        from neurofly16px.behavior.brain import BrainBehavior
+
+        behavior = BrainBehavior(cfg.brain)
+    elif args.behavior == "fsm":
         behavior = FsmBehavior(cfg.fsm, wander=WanderBehavior(cfg.wander))
     elif args.behavior == "wander":
         behavior = WanderBehavior(cfg.wander)
@@ -188,9 +193,15 @@ def main(argv: list[str] | None = None) -> int:
         log.info("interrupted")
         if recorder is not None:
             recorder.save(args.record)
+        close = getattr(behavior, "close", None)
+        if close is not None:
+            close()
         return 0
     if recorder is not None:
         recorder.save(args.record)
+    close = getattr(behavior, "close", None)
+    if close is not None:
+        close()
     log.info("stats: %s", stats)
     log.info(
         "display: %d shown, %d dropped by the worker%s",

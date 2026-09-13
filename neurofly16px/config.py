@@ -217,16 +217,37 @@ class BrainConfig:
     window_ms: float = 20.0
     """Spike-counting window; matches the behaviour tick."""
     ema_alpha: float = 0.3
-    giant_fibre_hz: float = 20.0
-    """Rate in either DNp01 that counts as an escape burst."""
-    walk_hz: float = 1.0
-    """dn_walking rate that maps to forward = 1."""
-    turn_gain: float = 4.0
-    """Left-right rate difference that maps to a full turn."""
+    giant_fibre_hz: float = 60.0
+    """Rate in either DNp01 that counts as an escape burst.
+
+    A 20 ms window quantises a single neuron to 50 Hz per spike, so this asks for a
+    burst rather than one spike surviving the smoothing.
+    """
+    drive_hz: float = 2.0
+    """Mean descending rate that maps to forward = 1.
+
+    Measured on this connectome: Johnston's-organ drive reaches the descending
+    population at 0.2 Hz per neuron for speech-level sound and ~1 Hz for a clap
+    (docs/banc.md), so the useful range sits well under a few Hz.
+    """
+    turn_gain: float = 1.0
+    """Multiplier on the left-right contrast of descending activity.
+
+    1.0 maps the contrast straight through; higher saturates the turn on the
+    modest asymmetries this model actually produces.
+    """
+    gf_novelty_ratio: float = 2.0
+    """An escape needs the giant fibre to rise this far above its own recent baseline.
+
+    Without it, any sustained sound pins the fly in escape: the giant fibre keeps
+    firing as long as the ears are driven. Real escape responses habituate.
+    """
+    gf_baseline_alpha: float = 0.02
+    """Smoothing of that baseline; slow next to `ema_alpha`."""
     fly_s: float = 0.8
     """How long a giant-fibre burst keeps the body in fly mode."""
-    idle_hz: float = 0.15
-    """Below this dn_walking rate the fly is idle."""
+    idle_hz: float = 0.05
+    """Below this mean descending rate the fly stands still."""
     seed: int = 0
 
 

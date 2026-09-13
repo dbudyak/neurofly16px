@@ -74,6 +74,10 @@ def build_populations(kept: pl.DataFrame, neck: pl.DataFrame) -> dict[str, dict]
 
     descending = (kept["super_class"] == "descending").to_numpy()
     pops["dn_all"] = population(descending, "super_class == descending")
+    for hand in ("left", "right"):
+        pops[f"dn_all_{hand}"] = population(
+            descending & (side == hand).to_numpy(), f"super_class == descending, side={hand}"
+        )
 
     by_id = dict(zip(neck["id"].to_numpy(), neck["super_cluster"].to_list(), strict=True))
     clusters = np.array([by_id.get(i, "") for i in ids])
