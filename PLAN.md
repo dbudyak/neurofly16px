@@ -1,23 +1,40 @@
 # Implementation plan
 
-Revised 2026-09-12. Every **VERIFY** item of the first version was checked
-against the real sources; the findings and `file:line` references live in
-`docs/flybody.md`, `docs/ditoo-protocol.md`, `docs/banc.md`, and the
-decisions and their alternatives in `docs/plan-assessment.md`. Items that
-can only be settled on the Gentoo host are marked **HOST** and are the first
-tasks of the phase that needs them.
+Written 2026-09-12, executed 2026-09-12/13. Every **VERIFY** item of the first
+version was checked against the real sources; the findings and `file:line`
+references live in `docs/flybody.md`, `docs/ditoo-protocol.md`, `docs/banc.md`,
+and the decisions and their alternatives in `docs/plan-assessment.md`. Items
+marked **HOST** could only be settled on the Gentoo host and were.
 
-Executable, step-by-step plans (TDD, one task per commit) exist for the next
-phases:
+## Status
+
+| phase | what it delivers | state |
+|---|---|---|
+| 0 | environments, policy export, first frame on the device | done |
+| 1 | pipeline skeleton on stubs, at the real rates | done |
+| 2 | flybody walking under the pretrained policy | done |
+| 3 | frames on the real Ditoo over RFCOMM | done |
+| 4 | microphone and the idle/walk/startle state machine | done; thresholds want one calibration session |
+| 5 | config file, service, recording, night mode | done |
+| 6 | BANC connectome brain and the activity viewer | done |
+| 7 | a box to live in: walls, ceiling, saccadic flight | done |
+
+Everything below is the plan as executed, with the corrections the work forced
+on it marked inline. What the fly does today, and how to run it, is in
+`README.md`.
+
+Executable, step-by-step plans (TDD, one task per commit), one per phase:
 
 - `docs/plans/2026-09-12-phase0-environment.md`
 - `docs/plans/2026-09-12-phase1-skeleton.md`
 - `docs/plans/2026-09-12-phase2-flybody-sim.md`
 - `docs/plans/2026-09-12-phase3-render-and-ditoo.md`
 - `docs/plans/2026-09-13-phase4-audio-behavior.md`
-- `docs/plans/2026-09-13-phase7-flight.md` (planned, not started)
-
-Phases 5 and 6 get their executable plans when they are reached.
+- `docs/plans/2026-09-13-phase5-polish.md`
+- `docs/plans/2026-09-13-phase6-brain.md`
+- `docs/plans/2026-09-13-phase7-box-world.md`
+- `docs/plans/2026-09-13-phase7-flight.md` — superseded by the box-world plan,
+  kept for its analysis of why live flight physics is out of reach.
 
 Guiding rules (unchanged):
 
@@ -35,11 +52,13 @@ Fixed facts the whole plan builds on:
 | walking physics step | 0.2 ms | `docs/flybody.md` |
 | policy input | 12 observables, flattened, sorted by name, float32 | `docs/flybody.md` |
 | policy output | 59 canonical actions in [-1, 1] | `docs/flybody.md` |
+| policy shape | 741 → 512 → 3 × 512 (ELU) → 59; **not** the 256 × 2 assumed | `docs/flybody.md` |
 | steering | synthetic reference trajectory (speed cm/s, yaw rad/s) | `docs/flybody.md` |
-| Ditoo link | Classic SPP/RFCOMM, `Ditoo-Audio`, channel 1 expected | `docs/ditoo-protocol.md` |
-| Ditoo packet | `01 len16 cmd payload sum16 02` | `docs/ditoo-protocol.md` |
+| Ditoo link | Classic SPP/RFCOMM, `DitooPro-Audio`, **channel 2** via SDP | `docs/ditoo-protocol.md` |
+| Ditoo packet | `01 len16 cmd payload sum16 02`, `0x44` for one image | `docs/ditoo-protocol.md` |
+| measured rates | sim 236 control steps/s (0.47×), panel 121 writes/s, brain 0.25× | `docs/flybody.md`, `docs/ditoo-protocol.md`, `docs/banc.md` |
 | brain model | Shiu et al. LIF, dt 0.1 ms, delay 1.8 ms, refractory 2.2 ms | `docs/banc.md` |
-| brain data | BANC v888; metadata public, connections behind login | `docs/banc.md` |
+| brain data | BANC v888, 144,047 neurons and 1,440,835 edges; **all of it public** | `docs/banc.md` |
 
 ---
 
@@ -92,21 +111,29 @@ real rates.
 
 Package layout (final):
 
+Package layout as planned in Phase 1; the final one, after Phases 4–7 added to
+it, is:
+
 ```
 neurofly16px/
-  __init__.py
-  types.py            # AudioFeatures, SteeringCommand, FlyState, Frame
-  config.py           # dataclass config, TOML loading, CLI overrides
+  types.py            # AudioFeatures, SteeringCommand, FlyState, Frame, Surface
+  config.py           # nested frozen dataclasses, TOML loading and discovery
   loop.py             # fixed-step sim clock, rate-limited behaviour and display
+  record.py           # --record: frames, states and commands to an npz
   cli.py              # `neurofly run ...`
-  audio/     base.py stub.py            mic.py (Phase 4)
-  behavior/  base.py scripted.py        fsm.py (Phase 4)  brain.py (Phase 6)
-  sim/       base.py stub.py hop.py     policy.py steer_task.py flybody_sim.py (Phase 2)
-  render/    base.py sprite.py
-  device/    base.py terminal.py ppm.py worker.py   protocol.py rfcomm.py ditoo.py (Phase 3)
-  brain/     (Phase 6)   viewer/ (Phase 6)
-scripts/   smoke_flybody.py export_policy.py bench_sim.py ditoo_probe.py ditoo_bench.py
-tests/
+  audio/     base.py stub.py features.py mic.py pipewire.py
+  behavior/  base.py scripted.py fsm.py wander.py brain.py
+  sim/       base.py stub.py hop.py policy.py steer_task.py flybody_sim.py world.py
+  render/    base.py sprite.py (top-down) side.py (the box, what the panel shows)
+  device/    base.py terminal.py ppm.py worker.py schedule.py
+             protocol.py rfcomm.py ditoo.py
+  brain/     anatomy.py lif.py stimulus.py readout.py runner.py
+  viewer/    server.py page.html
+scripts/   smoke_flybody.py smoke_numpy_policy.py export_policy.py bench_sim.py
+           ditoo_probe.py ditoo_bench.py audio_probe.py preview_frames.py
+           fetch_banc.sh build_anatomy.py build_connectome.py bench_brain.py
+contrib/   neurofly.service (systemd user unit) neurofly.openrc
+tests/     209 tests
 ```
 
 Interfaces (`neurofly16px/types.py`, frozen dataclasses):
@@ -137,6 +164,7 @@ class FlyState:
     airborne: bool
     legs_down: tuple[bool, bool, bool, bool, bool, bool]   # T1L, T1R, T2L, T2R, T3L, T3R
     wing_phase: float         # 0..1, meaningful only while airborne
+    surface: Surface = "floor"   # added in Phase 7: floor/right/ceiling/left/air
 
 Frame = np.ndarray            # uint8 (16, 16, 3), [row, col, rgb], row 0 = top
 ```
@@ -153,7 +181,8 @@ callback thread and publishes the latest `AudioFeatures` under a lock.
 Sim time is advanced in whole control steps until it catches up with the
 monotonic clock, at most `max_catchup_steps` per tick; if the sim cannot keep
 up, the backlog is dropped and counted (slow motion, logged). Behaviour runs
-at 50 Hz, display at a configurable cap (default 8 fps). A `--seconds N`
+at 50 Hz, display at a configurable cap (8 fps as planned; **16 fps** after
+Phase 3 measured the panel). A `--seconds N`
 option and an injectable clock make the loop unit-testable.
 
 Stubs: `audio/stub.py` replays a scripted feature sequence (or silence);
@@ -271,6 +300,20 @@ Tests: feature sequences → command sequences (no hardware).
 
 Done when: clapping makes the fly hop and turn; talking makes it walk;
 silence makes it stop; the FSM tests pass.
+
+**As built**, two things changed (`docs/setup.md`, "Audio"):
+
+- **The backend is PipeWire, not PortAudio.** `sounddevice` installs but cannot
+  open a device here — it needs system PortAudio, which is absent, and Gentoo's
+  package defaults to `USE="-alsa"`, i.e. no backend at all. `audio/pipewire.py`
+  reads raw float32 from `pw-record`; `audio/mic.py` keeps the `sounddevice`
+  path for hosts that have PortAudio, and `--audio mic` picks whichever works.
+- **The AGC was replaced.** Normalising loudness by a slow average of itself
+  pulls *any* steady level to the middle of the range, so a quiet room reads
+  exactly like a conversation. Loudness is now measured relative to a tracked
+  noise floor and scaled by it, which also makes every threshold independent of
+  microphone gain — the same clap reads 1.00 on a hot mic and a quiet one.
+  Verified end to end on the live microphone.
 
 ---
 
@@ -393,7 +436,23 @@ audio and commands to `.npz`.
 
 Done when: a clap produces a visible burst propagating through the heat map
 and a hop on the Ditoo; sustained noise produces walking; the sugar-GRN
-sanity test passes.
+sanity test passes. All three hold; the measurements are in `docs/banc.md`.
+
+**As built**, the model corrected the plan twice:
+
+- **Propagation is an SpMV, not an event-driven gather.** 6.1 assumed gathering
+  only the rows of neurons that spiked would beat a matrix product. It is 3×
+  slower (945 against 2,949 steps/s), because `nonzero()` and reading a
+  data-dependent size force a GPU-to-CPU sync every step while an SpMV over
+  1.4 M edges needs none. The same lesson applied to the runaway guard and to
+  the Poisson drive.
+- **The readout had to be rebuilt on what sound actually reaches.** 6.3 mapped
+  `dn_walking` to forward speed; measured, the walking cluster is silent at
+  every stimulation level while the giant fibre DNp01 goes from 50 Hz at speech
+  level to 184 Hz on a clap. Sound reaches the body through the escape pathway.
+  Forward speed now comes from the mean descending rate, turning from the
+  left-right contrast, and escape from the giant fibre with habituation —
+  without which any sustained sound pins the fly in permanent escape.
 
 ### Phase 6 non-goals
 
@@ -408,15 +467,38 @@ sanity test passes.
 
 ---
 
-## Phase 7 — Flight across the panel
+## Phase 7 — A box to live in
 
-Goal: a startle takes the fly off the floor, across the panel and back down,
-using flybody's real flight dynamics recorded offline and replayed live —
-live flight needs 5,000 policy calls and 20,000 physics steps per second
-against the 236 control steps/s this host manages.
+Goal: the panel is a room seen from the side. The fly walks the floor, climbs
+the walls and crosses the ceiling upside down; a startle sends her flying
+erratically through the whole screen until she lands somewhere else.
 
-Planned in `docs/plans/2026-09-13-phase7-flight.md`; independent of Phases 4–6,
-needs Phases 2 and 3. Until then `mode="fly"` is a jump in place.
+Planned in `docs/plans/2026-09-13-phase7-box-world.md`. The first version of
+this phase (`...-phase7-flight.md`) was going to replay flight trajectories
+recorded offline from flybody's flight policy; the owner asked instead for
+flight that moves "somewhat in random directions with random trajectories,
+like a real fly", so it became a kinematic model of saccadic flight.
+
+What is simulated, and what is not:
+
+- **Walking stays flybody.** `sim/world.py` is a decorator over any `FlySim`:
+  the physics still produces speed, gait and leg contacts, and the world layer
+  only decides which surface that walking happens on. The policy tracks a
+  ghost across flat ground and has never climbed anything; at five pixels the
+  effect of gravity on a tripod gait is invisible, so this is honest rather
+  than faked.
+- **Flight is kinematic and openly so.** Free-flying flies travel in straight
+  segments broken by body saccades — turns of 30–150° several times a second —
+  and that is the model: segments, saccades, and walls she either lands on
+  (35 % per touch) or veers off. Live flight physics remains out of reach:
+  5,000 policy calls and 20,000 physics steps per second against the 236
+  control steps/s this host manages, on a different MJCF with the legs removed.
+- Corners are a behaviour, not a coin flip: she carries on around onto the wall
+  unless the behaviour layer is asking for a turn worth more than
+  `world.corner_turn_bias`.
+
+Done: she walks the walls and ceiling on the real Ditoo, and a 4-minute run
+delivered 3,483 frames with no link drops.
 
 ---
 
@@ -426,16 +508,30 @@ needs Phases 2 and 3. Until then `mode="fly"` is a jump in place.
 - The Ditoo's own microphone, buttons or speaker; any Wi-Fi / cloud API.
 - Faithful 3-D rendering.
 - Motor-neuron-level control of the body.
-- Flight physics *solved* in the live loop (Phase 7 replays recorded clips
-  instead).
+- Flight physics *solved* in the live loop (Phase 7 models saccadic flight
+  kinematically instead).
 
-## Open questions (HOST only)
+## Questions the host answered
 
-- Original Ditoo: which image command, `0x46` reply layout, sustainable fps.
-- Control steps per second with the numpy policy on the host CPU.
-- Whether the walking policy tracks synthetic references well at all speeds
-  in `[0, 2]` cm/s and yaw rates up to 2 rad/s; the leash distance.
-- BANC export file names/columns; JO-A/B counts; whether the FAFB-tuned
-  `w_syn` keeps brain + VNC stable; LIF steps per second on the 3090;
-  whether JO stimulation reaches the giant fibre and walking DNs in this
-  model or needs routing through more specific auditory types.
+Every **HOST** item is closed; the numbers live in `docs/`.
+
+| question | answer |
+|---|---|
+| which image command, `0x46` layout, sustainable fps | `0x44`; 31-byte reply, view at offset 6 and brightness at 12; 121 writes/s accepted, smooth to 20 fps, default 16 |
+| control steps per second with the numpy policy | 236/s = 0.47× real time, after caching an upstream per-step MJCF tree walk that cost 45 % of the loop |
+| does the walking policy track synthetic references | yes, at 2 cm/s and 2 rad/s, with a 0.15 cm leash; tested straight, turning and standing |
+| BANC export file names and columns | `banc_888_edgelist_simple_v2.feather` (`pre`, `post`, `count`, …), **not** pre-thresholded: 11.75 M pairs from `count` 1 |
+| JO-A/B counts | JO-A 93, JO-B 417 (sound); JO-C 53, JO-E 409 (wind); labels live in `cell_sub_class`, not `cell_class` |
+| does the FAFB-tuned `w_syn` keep brain + VNC stable | yes at `min_synapses` 5, no runaway in any run — once autapses are dropped |
+| LIF steps per second on the 3090 | 2,949/s = 0.29× real time, SpMV propagation |
+| does JO stimulation reach the giant fibre and the walking DNs | the giant fibre yes, overwhelmingly (50 Hz at speech level, 184 Hz on a clap); the walking cluster **not at all**, which rewrote the readout |
+
+## Still open
+
+- **Speech thresholds.** Claps reliably startle her; conversation sits near the
+  bottom of the range. Thirty seconds of recorded speech and clapping would set
+  `loud_gain`, `t_walk` and `t_startle` from real distributions instead of
+  estimates (`scripts/audio_probe.py`).
+- **Power-cycle recovery.** The reconnect path (backoff 1 s → 30 s, frames
+  dropped meanwhile) is unit-tested against fake sockets but has never been
+  seen on the real device; the run meant to test it never lost power.

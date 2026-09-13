@@ -95,3 +95,50 @@ channels, with PipeWire base volume −12 dB. One raw capture peaked at
 −1.1 dBFS, about 1 dB from clipping. Back off the mic's physical gain knob
 before recording anything loud, or the feature extractor will see clipped
 frames.
+
+---
+
+## Answers, 2026-09-13 (Phase 4 as built)
+
+The open items above are closed; the code that resulted is
+`neurofly16px/audio/pipewire.py`, `features.py` and `mic.py`.
+
+**PortAudio: not installed, and not pursued.** `media-libs/portaudio` would also
+need `USE="alsa"` to have a backend at all, so rather than change the system the
+microphone stage reads raw float32 from `pw-record`, which this document had
+already shown to resample correctly. `sounddevice` remains the path for hosts
+that have PortAudio, and `--audio mic` picks whichever is available. The
+16 kHz-needs-a-resampler warning is therefore satisfied by construction: the
+stage never opens a `hw:` device.
+
+**Direction: measured on claps, and it is not usable.** This document asked for
+a re-measurement with a loud, close, off-axis source before trusting
+`AudioFeatures.direction`. Done, in an 80-second live run: even for claps from
+one side the inter-channel balance stayed within ±0.01, consistent with the
+0.997 correlation measured here on ambience. The estimator now reports `None`
+below `audio.direction_min_balance` (5 % balance), so a bearing is either real or
+absent — the behaviour layers treat `None` as "pick a side at random", which they
+already had to support for mono. A real azimuth needs two spaced microphones.
+
+**Gain: fine, and the sensitivity problem was ours.** A clap peaked at 0.81 of
+full scale in a 151-second capture, so the mic is nowhere near too quiet — an
+earlier reading in this project that it was "20–50× too quiet" was wrong, taken
+from a window in which nobody clapped. The real problem was in the feature
+extractor: loudness was scaled against a hard-coded RMS that assumed a hot
+microphone. It is now scaled against the room's own tracked noise floor, which
+makes every behaviour threshold independent of gain — the same clap reads 1.00
+on a hot mic and on one 30× quieter. The clipping warning above still stands for
+the physical knob.
+
+**Room levels measured through the finished stage** (20 ms blocks, this mic):
+
+| condition | raw RMS | normalised loudness |
+|---|---|---|
+| quiet room | 0.0023 – 0.0038 | 0.00 – 0.05 |
+| speech at the desk | ~0.03 | ~0.7 |
+| clap | 0.2 – 0.8 peak sample | 1.00 |
+
+Still open: speech at desk distance sits close enough to the walk threshold that
+one calibration session — talk for ten seconds, clap three times, read
+`scripts/audio_probe.py` — should set `loud_gain`, `t_walk` and `t_startle` from
+the distributions rather than from estimates.

@@ -13,45 +13,50 @@ The [Divoom Ditoo](https://divoom.com) is a Bluetooth speaker with a 16×16 RGB 
 
 The idea is to put the one on the other: run the real physics simulation on a Linux box, drive the pretrained controllers with a behavior layer that listens to a microphone, and render the fly onto the Ditoo. The fly should walk around, stop, turn toward or away from noises, maybe take off when startled — the behaviors come from a real biomechanical model, not a sprite sheet.
 
-The behavior layer starts as a hand-written state machine. The second stage replaces it with a spiking model of the fly's entire central nervous system built from the [BANC](https://blog.flywire.ai/2025/11/03/the-banc-brain-and-nerve-cord/) connectome (v888, 2026): ~188k neurons and ~199M synapses spanning brain and ventral nerve cord of one female fly. Sound drives the auditory (Johnston's organ) neurons, activity propagates through the wiring diagram, and descending-neuron output steers the body. A live viewer shows the activity as a heat map while the fly reacts on the display.
+The behavior layer started as a hand-written state machine. It is now also a spiking model of the fly's entire central nervous system built from the [BANC](https://blog.flywire.ai/2025/11/03/the-banc-brain-and-nerve-cord/) connectome (v888, 2026): 144,047 proofread neurons and 1,440,835 synaptic connections spanning brain and ventral nerve cord of one female fly. Sound drives the auditory (Johnston's organ) neurons, activity propagates through the wiring diagram, and descending-neuron output steers the body. A live viewer shows the activity as a heat map while the fly reacts on the display. Both are available: `--behavior fsm` and `--behavior brain`.
 
 This is a hobby project. The goal is a fly that feels alive on a desk toy, not a research result.
 
 ## What this is not
 
-- Not a faithful brain simulation. flybody has no nervous system. The connectome model (Phase 6) is a leaky integrate-and-fire propagation model with uniform neuron parameters and synapse-count weights — wiring is real, dynamics are a coarse assumption. Until then, "reactions" come from a hand-written behavior layer.
-- Not a high-fidelity render. At 16×16 the fly is a ~5-pixel blob. What is visible is posture, heading, gait, and whether it is airborne.
+- Not a faithful brain simulation. flybody has no nervous system, and the connectome model is leaky integrate-and-fire with uniform neuron parameters and synapse-count weights — the wiring is real, the dynamics are a coarse assumption. It also runs at about a quarter of real time.
+- Not real flight. The walking is flybody's trained policy, but flight is a kinematic model of saccadic flight: straight dashes broken by sudden turns, which is how a real fly crosses a room, without the aerodynamics. Live flight physics needs 5,000 policy calls and 20,000 physics steps per second against the 236 this host manages.
+- Not a high-fidelity render. At 16×16 the fly is a five-pixel blob. What is visible is posture, heading, gait, which surface she is on, and whether she is airborne.
+- Not wall-climbing physics. The policy walks on flat ground; the world layer decides which surface that walking is mapped onto. At five pixels, gravity's effect on a tripod gait is invisible.
 
 ## Architecture
 
 ```
- mic (PipeWire/Pulse)
-   │  PCM
+ mic (PipeWire `pw-record`, or PortAudio where it exists)
+   │  PCM, 16 kHz, 20 ms blocks
    ▼
- audio/        loudness, onset, (optional) direction   ~50 Hz
+ audio/        loudness over the room's noise floor, onset, direction   50 Hz
    │  AudioFeatures
    ▼
- behavior/     Phase 4: FSM idle / walk / turn / startle / fly
-               Phase 6: brain/ — BANC LIF model on GPU, JO stimulus in,
-                        descending-neuron readout out; viewer/ shows heat map
-   │  SteeringCommand (v_forward, v_turn, mode)
+ behavior/     fsm     — idle / walk / startle / fly, thresholds in config
+               brain   — BANC connectome: 144k neurons, 1.4M synapses, LIF on
+                         the GPU in its own process; viewer/ streams the heat map
+               wander  — what she does when no audio arrives at all
+   │  SteeringCommand (forward, turn, mode)
    ▼
  sim/          flybody env + pretrained policy   500 Hz control, 5 kHz physics
-   │  FlyState (pos, heading, joint angles, airborne, gait phase)
+               world.py — puts that walking on the floor, walls or ceiling of a
+                          box, and flies her across it when startled
+   │  FlyState (position, heading, surface, airborne, per-leg contact, wing phase)
    ▼
- render/       FlyState → 16×16 RGB frame (sprite-based, EGL render optional)
+ render/       FlyState → 16×16 RGB frame   side.py (the box) / sprite.py (top-down)
    │  np.uint8[16,16,3]
    ▼
- device/       Ditoo Bluetooth SPP driver   ≤ ~10 fps
+ device/       Ditoo Bluetooth SPP driver   16 fps, reconnects on its own
 ```
 
-Each stage is a separate module with a plain dataclass interface, so any stage can be replaced by a stub (fake audio, scripted behavior, fake device that renders to a terminal/PNG).
+Each stage is a separate module with a plain dataclass interface, so any stage can be replaced by a stub: scripted audio, scripted behaviour, a kinematic sim, a terminal or PPM display. `neurofly run --dry-run` runs the whole pipeline on stubs with no hardware, no MuJoCo and no GPU.
 
 ## Hardware
 
-- Linux (Gentoo) host with Bluetooth adapter. The RTX 3090 is not needed for flybody inference; it runs the connectome model in Phase 6 (sparse matrix of tens of millions of nonzeros, one SpMV per 0.1 ms step). ≥32 GB system RAM recommended for preprocessing the connectome tables.
-- Divoom Ditoo (original, 16×16). USB-C is charge-only; all control is over Bluetooth Classic SPP/RFCOMM.
-- Any USB/onboard microphone. The Ditoo's own mic is not assumed to be reachable over the protocol.
+- Linux (Gentoo) host with a Bluetooth adapter. The RTX 3090 is not needed for flybody inference; it runs the connectome model (one sparse matrix-vector product over 1.4 M edges per 0.1 ms step). ≥ 32 GB RAM for preprocessing the connectome tables — the build peaks well under that, but the raw edgelist is 305 MB.
+- Divoom **DitooPro**, 16×16. USB-C is charge-only; all control is Bluetooth Classic SPP/RFCOMM, on channel 2 for this unit (resolved from SDP, not hardcoded).
+- A USB microphone. On this host the onboard inputs deliver nothing and PortAudio is not installed, so capture goes through PipeWire — see `docs/host-audio.md` for the card-profile trap that makes a working mic look absent. The Ditoo's own microphone is not used.
 
 ## Running it
 
@@ -124,8 +129,8 @@ Phases 0–7 running end to end; Phase 4's thresholds still want one calibration
 
       uv run neurofly run --audio stub --behavior scripted --sim stub --device terminal
 
-  shows the sprite walking, turning and hopping in the terminal (500 sim
-  steps/s, 50 Hz behaviour, 8 fps display, no dropped steps).
+  shows the fly walking, turning and hopping in the terminal (500 sim steps/s,
+  50 Hz behaviour, no dropped steps; the display cap was 8 fps then, 16 now).
 - **Phase 2** (real simulation): `--sim flybody` runs the MuJoCo fly under the
   pretrained walking policy, steered by a leashed "ghost" reference —
 

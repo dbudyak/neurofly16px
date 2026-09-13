@@ -23,9 +23,21 @@ System Python is never used or modified; `uv` manages both interpreters.
 
 ### Runtime env `.venv` (Python 3.12)
 
-    uv sync --extra dev
+    uv sync --extra dev                                    # core + tests
+    uv sync --extra dev --extra audio                      # + microphone
+    uv sync --extra dev --extra audio --extra brain --extra viewer   # + connectome
 
-Python 3.12 because flybody pins `numpy==1.26.4`.
+Python 3.12 because flybody pins `numpy==1.26.4`. The extras are additive and
+each one is optional at runtime:
+
+| extra | pulls in | needed for |
+|---|---|---|
+| `dev` | pytest, ruff | tests and linting |
+| `audio` | sounddevice | the PortAudio mic path (PipeWire needs nothing) |
+| `brain` | torch, polars, pyarrow | `--behavior brain` (~2.5 GB with CUDA) |
+| `viewer` | websockets | `--viewer`, the activity heat map |
+
+Nothing in the core loop imports torch: the brain runs in its own process.
 
 ### Export env `.venv-tf` (Python 3.10, only for `scripts/export_policy.py`)
 
@@ -74,6 +86,24 @@ The unzipped layout has **no `policy/` level**, unlike `PLAN.md`:
 
 So the walking policy directory is `data/flybody/trained-fly-policies/walking`.
 
+## Connectome data (Phase 6)
+
+All of it is public — no FlyWire, Codex or Dataverse account, contrary to the
+note in the first version of `docs/banc.md`.
+
+    ./scripts/fetch_banc.sh                    # 68 MB of metadata from htem/BANC-project
+    curl -L -o data/banc/banc_888_edgelist_simple_v2.feather \
+        https://dataverse.harvard.edu/api/access/datafile/13992792   # 305 MB, anonymous
+    uv run python scripts/build_anatomy.py     # -> data/banc_anatomy.npz, data/populations.json
+    uv run python scripts/build_connectome.py  # -> data/banc_v888.npz (CSR wiring)
+    uv run python scripts/bench_brain.py       # sanity check + steps/s
+
+The dataset page is
+`https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/7WTH1N`;
+the DOI on its own resolves to the citation page, not the files. Everything
+lands in the git-ignored `data/`. Build takes a couple of minutes and about
+2 GB of RAM; the result is 5.3 MB of CSR plus 3.3 MB of anatomy.
+
 ## Bluetooth
 
 Adapter, pairing and the Ditoo's RFCOMM channel are recorded in
@@ -90,6 +120,9 @@ view, sets brightness and puts a checkerboard on the panel. Findings are in
 `docs/ditoo-protocol.md` under "Confirmed on hardware".
 
 ## Audio (Phase 4)
+
+**See also `docs/host-audio.md`** for the microphone itself — in particular the
+PipeWire card profile that ships `off` and makes a working mic look absent.
 
 `sounddevice` installs (`uv sync --extra audio`) but cannot open a device on
 this host: it needs system PortAudio, which is not installed, and Gentoo's

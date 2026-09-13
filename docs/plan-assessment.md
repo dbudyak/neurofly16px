@@ -116,8 +116,15 @@ The revised `PLAN.md` incorporates every decision below.
 10. **Camera / arena.** → Fixed top-down arena of 8 × 8 cm mapped to 16 × 16
     px (0.5 cm per pixel), toroidal wrap. The sprite is not to scale (the
     real fly is 2.5 mm long); at 2 cm/s it moves 4 px/s, which reads well.
+    **2026-09-13:** the owner looked at it and said it was not what he had
+    pictured — he wanted a **side view**, with the fly on the bottom of the
+    screen. So the panel is now a room seen from the side: a 4 × 4 cm box with
+    a floor, two walls and a ceiling, drawn by `render/side.py`; the top-down
+    renderer survives as `--view top`. Phase 7 then let her walk every face of
+    it. Keeping both was cheap because the renderer was already a pure function
+    of `FlyState`.
 
-11. **BANC data access.** Both Codex (Google login) and Dataverse (account +
+11. **BANC data access.** *(Correction below: no account is needed.)* Both Codex (Google login) and Dataverse (account +
     access request; anonymous download is HTTP 403) need an account. The
     per-neuron metadata parquet and the AN/DN cluster CSVs are public in the
     `htem/BANC-project` git repo. → Populations (JO-A/B by side, DN groups by
@@ -150,6 +157,12 @@ The revised `PLAN.md` incorporates every decision below.
 16. **Audio backend.** → `sounddevice` (PortAudio) at 16 kHz, 20 ms blocks;
     PipeWire's Pulse/ALSA shims make the mic visible. Needs
     `media-libs/portaudio` on the host.
+    **2026-09-13:** PortAudio is not installed and Gentoo's package defaults to
+    `USE="-alsa"`, so `sounddevice` has no backend here. The stage reads raw
+    float32 from PipeWire's `pw-record` instead (`audio/pipewire.py`), with the
+    `sounddevice` path kept for hosts that have PortAudio; `--audio mic` picks
+    whichever works. 16 kHz still needs a resampler and PipeWire does it
+    (`docs/host-audio.md`).
 
 ## Decisions the owner should confirm before Phase 1
 
@@ -182,4 +195,10 @@ Defaults are the first column; the plans are written against them.
   is now 2.2 GiB. Anything that installs TensorFlow or MuJoCo must run on the
   Gentoo host.
 - The flybody, Shiu and BANC repositories are public; the connection table
-  is the only artefact behind a login.
+  was believed to be the only artefact behind a login.
+  **2026-09-13: it is not.** `banc_888_edgelist_simple_v2.feather` (305 MB,
+  file id 13992792) reports `restricted: false` on Harvard Dataverse and
+  downloads anonymously through a signed S3 redirect — no account, no access
+  request, no Codex sign-in. Decision 11 therefore never had to be made. The
+  DOI resolving to a citation page rather than the files is what made it look
+  gated. Details in `docs/banc.md`, "Wiring".

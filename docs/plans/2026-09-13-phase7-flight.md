@@ -1,4 +1,12 @@
-# Phase 7 — Flight across the panel (plan only, not started)
+# Phase 7 — Flight across the panel (SUPERSEDED, never built)
+
+> **Superseded on 2026-09-13** by
+> `docs/plans/2026-09-13-phase7-box-world.md`. The owner asked for flight that
+> moves "somewhat in random directions with random trajectories, like a real
+> fly" rather than a replayed recording, so the built version models saccadic
+> flight kinematically. This plan is kept for the analysis below of *why* live
+> flight physics is out of reach, which still holds, and for the clip-recording
+> design should anyone want real flight dynamics later.
 
 **Goal:** When the fly is startled she takes off, crosses the panel through the
 air with her wings beating, and lands again — using flybody's real flight
