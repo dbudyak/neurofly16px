@@ -202,6 +202,31 @@ class BrainConfig:
     """...but never call a handful of neurons a runaway, whatever fraction they are."""
     guard_every_steps: int = 50
     """Steps between runaway checks; each check reads the GPU, which costs a sync."""
+
+    # --- stimulus (PLAN.md 6.2) ---
+    r_max_hz: float = 150.0
+    """Johnston's-organ drive at full loudness; Shiu et al.'s default stimulation rate."""
+    stim_k: float = 20.0
+    """Compression: rate = r_max * log1p(k * rms) / log1p(k)."""
+    onset_hz: float = 250.0
+    onset_ms: float = 50.0
+    wind_fraction: float = 0.0
+    """Drive sent to the wind-sensitive JO-C/JO-E populations; sound uses JO-A/JO-B."""
+
+    # --- readout (PLAN.md 6.3) ---
+    window_ms: float = 20.0
+    """Spike-counting window; matches the behaviour tick."""
+    ema_alpha: float = 0.3
+    giant_fibre_hz: float = 20.0
+    """Rate in either DNp01 that counts as an escape burst."""
+    walk_hz: float = 1.0
+    """dn_walking rate that maps to forward = 1."""
+    turn_gain: float = 4.0
+    """Left-right rate difference that maps to a full turn."""
+    fly_s: float = 0.8
+    """How long a giant-fibre burst keeps the body in fly mode."""
+    idle_hz: float = 0.15
+    """Below this dn_walking rate the fly is idle."""
     seed: int = 0
 
 

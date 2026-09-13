@@ -78,7 +78,14 @@ def build_populations(kept: pl.DataFrame, neck: pl.DataFrame) -> dict[str, dict]
     by_id = dict(zip(neck["id"].to_numpy(), neck["super_cluster"].to_list(), strict=True))
     clusters = np.array([by_id.get(i, "") for i in ids])
     for name, cluster in SUPER_CLUSTERS.items():
-        pops[name] = population(clusters == cluster, f"neck super_cluster == {cluster!r}")
+        in_cluster = clusters == cluster
+        pops[name] = population(in_cluster, f"neck super_cluster == {cluster!r}")
+        # The readout steers on left-minus-right, so every cluster is also split.
+        for hand in ("left", "right"):
+            pops[f"{name}_{hand}"] = population(
+                in_cluster & (side == hand).to_numpy(),
+                f"neck super_cluster == {cluster!r}, side={hand}",
+            )
 
     for dn in NAMED_DNS:
         for hand in ("left", "right"):
