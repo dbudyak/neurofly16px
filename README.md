@@ -71,7 +71,23 @@ uv run neurofly run --sim stub --seconds 30   # quick check, no MuJoCo
 
 Every setting has a flag that overrides the file: `--sim`, `--device`,
 `--audio`, `--behavior`, `--view`, `--fps`, `--mac`, `--audio-device`,
-`--seconds`, `--log-level`.
+`--seconds`, `--log-level`. Three more are worth knowing:
+
+```sh
+uv run neurofly run --dry-run              # stubs everywhere: no Bluetooth, no MuJoCo, no mic
+uv run neurofly run --record run.npz       # keep every displayed frame, state and command
+uv run neurofly run --no-night             # ignore the night window for this run
+```
+
+`--record` writes `frames (n, 16, 16, 3)`, `states` (t, x, y, z, heading, speed,
+airborne, wing phase, six leg flags) and `commands` (forward, turn, mode), one
+row per displayed frame — `np.load` gives them straight back.
+
+She keeps herself busy without a microphone: if no audio block arrives for five
+seconds — none configured, device gone, capture process dead — the state machine
+hands over to a slow random walk and takes back the moment sound returns.
+Between `night.start` and `night.end` (local hours) the panel goes dark and stays
+dark until morning.
 
 ### As a background service
 
@@ -96,7 +112,7 @@ equivalent, written but untested — this host runs systemd.
 
 ## Status
 
-Phases 0–3 done; Phase 4 built and awaiting a live check.
+Phases 0–5 done; Phase 4's thresholds still want one calibration session.
 
 - **Phase 0** (host verification): both `uv` environments exist, the pretrained
   walking policy is exported to numpy and reproduces TensorFlow to 3e-6, the fly
@@ -130,9 +146,13 @@ Phases 0–3 done; Phase 4 built and awaiting a live check.
   real device (`docs/ditoo-protocol.md`).
 - **Phase 4** (audio and behaviour): `--audio mic --behavior fsm` listens on the
   microphone (PipeWire `pw-record`; `sounddevice` where PortAudio exists) and
-  runs the idle / walk / startle state machine. Silence keeps the fly still with
-  the live microphone; the talk-and-clap thresholds still need one session in
-  front of the desk (`docs/plans/2026-09-13-phase4-audio-behavior.md`).
+  runs the idle / walk / startle state machine. Claps reliably make her hop
+  (verified on the device); the walk threshold still wants one calibration
+  session in front of the desk
+  (`docs/plans/2026-09-13-phase4-audio-behavior.md`).
+- **Phase 5** (polish and service): `neurofly.toml` with discovery, a systemd
+  user service, `--dry-run`, `--record`, the no-microphone random walk and night
+  mode. See "Running it" above.
 
 [PLAN.md](PLAN.md) is the roadmap; `docs/plan-assessment.md` lists the decisions
 taken and the ones awaiting the owner; `docs/plans/` holds the executable plans
