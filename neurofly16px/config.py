@@ -249,6 +249,11 @@ class BrainConfig:
     idle_hz: float = 0.05
     """Below this mean descending rate the fly stands still."""
     seed: int = 0
+    viewer: bool = False
+    """Serve the activity heat map over websockets (needs the `viewer` extra)."""
+    viewer_host: str = "127.0.0.1"
+    viewer_port: int = 8765
+    viewer_hz: float = 10.0
 
 
 @dataclass(frozen=True)

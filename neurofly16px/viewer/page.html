@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>neurofly16px — brain</title>
+<style>
+  :root {
+    --bg: #0b0d10; --panel: #14171c; --line: #232830; --ink: #e6e9ee; --muted: #8a94a4;
+    --accent: #ff8a1f; --cool: #4aa3ff; --hot: #ff4d3d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); padding: 20px;
+    font: 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  h1 { font-size: 15px; margin: 0 0 2px; letter-spacing: .04em; text-transform: uppercase; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: 12px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 6px; background: #05070a; image-rendering: pixelated; }
+  .legend { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 8px; }
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+  .row span:first-child { color: var(--muted); }
+  .bars { margin-top: 10px; }
+  .bar { display: grid; grid-template-columns: 150px 1fr 58px; gap: 8px; align-items: center; padding: 2px 0; font-size: 12px; }
+  .bar .name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track { background: #0a0d11; border-radius: 3px; height: 9px; overflow: hidden; }
+  .fill { height: 100%; background: var(--accent); width: 0; transition: width .1s linear; }
+  .fill.gf { background: var(--hot); }
+  .value { text-align: right; font-variant-numeric: tabular-nums; }
+  .mode { text-transform: uppercase; letter-spacing: .08em; }
+  .mode.fly { color: var(--hot); } .mode.walk { color: var(--accent); } .mode.idle { color: var(--muted); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--hot); margin-right: 6px; }
+  .dot.live { background: #3ddc84; }
+  h2 { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; font-weight: 500; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+</style>
+</head>
+<body>
+  <h1>neurofly16px — connectome brain</h1>
+  <p class="sub"><span class="dot" id="dot"></span><span id="status">connecting…</span></p>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Soma activity, spikes per 20 ms window</h2>
+      <canvas id="heat" width="160" height="120"></canvas>
+      <div class="legend"><span>head (brain, optic lobes)</span><span id="peak">peak 0</span><span>ventral nerve cord</span></div>
+    </div>
+
+    <div class="panel">
+      <h2>Body command</h2>
+      <div class="row"><span>mode</span><span class="mode" id="mode">idle</span></div>
+      <div class="row"><span>forward</span><span id="forward">+0.00</span></div>
+      <div class="row"><span>turn</span><span id="turn">+0.00</span></div>
+      <hr>
+      <h2>Brain</h2>
+      <div class="row"><span>simulated</span><span id="simtime">0.0 s</span></div>
+      <div class="row"><span>speed</span><span id="ratio">0.00×</span></div>
+      <div class="row"><span>spiking now</span><span id="spikes">0</span></div>
+      <div class="row"><span>weight scale</span><span id="wscale">1.00</span></div>
+      <hr>
+      <h2>Descending neurons, Hz</h2>
+      <div class="bars" id="bars"></div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const W = 160, H = 120;
+  const canvas = document.getElementById("heat");
+  const ctx = canvas.getContext("2d");
+  const image = ctx.createImageData(W, H);
+  const el = (id) => document.getElementById(id);
+  const BARS = [
+    ["dn_DNp01_right", "giant fibre R", 200],
+    ["dn_DNp01_left", "giant fibre L", 200],
+    ["dn_threat_response", "threat response", 6],
+    ["dn_takeoff_landing", "takeoff / landing", 6],
+    ["dn_flight_steering_1", "flight steering", 6],
+    ["dn_head_orienting", "head orienting", 6],
+    ["dn_walking", "walking", 6],
+    ["dn_all", "all descending", 3],
+  ];
+  const rows = {};
+  for (const [key, label, max] of BARS) {
+    const row = document.createElement("div");
+    row.className = "bar";
+    row.innerHTML = `<span class="name">${label}</span>
+      <span class="track"><span class="fill${key.includes("DNp01") ? " gf" : ""}"></span></span>
+      <span class="value">0.0</span>`;
+    el("bars").appendChild(row);
+    rows[key] = { fill: row.querySelector(".fill"), value: row.querySelector(".value"), max };
+  }
+
+  function paint(heat, ceiling) {
+    const data = image.data;
+    for (let i = 0; i < W * H; i++) {
+      const v = heat[i] / ceiling;
+      const j = i * 4;
+      if (v <= 0) { data[j] = 8; data[j + 1] = 10; data[j + 2] = 14; data[j + 3] = 255; continue; }
+      // dark blue -> orange -> white, so a burst is unmistakable
+      const t = Math.min(1, Math.pow(v, 0.45));
+      data[j] = Math.min(255, 40 + 460 * t);
+      data[j + 1] = Math.min(255, 60 + 300 * t * t);
+      data[j + 2] = Math.min(255, 120 + 200 * Math.pow(t, 4) - 60 * t);
+      data[j + 3] = 255;
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
+  function connect() {
+    const ws = new WebSocket(`ws://${location.host}/`);
+    ws.onopen = () => { el("status").textContent = "live"; el("dot").className = "dot live"; };
+    ws.onclose = () => {
+      el("status").textContent = "disconnected — retrying";
+      el("dot").className = "dot";
+      setTimeout(connect, 1500);
+    };
+    ws.onmessage = (event) => {
+      const f = JSON.parse(event.data);
+      paint(f.heat, f.ceiling || 1);
+      el("peak").textContent = `peak ${f.ceiling}`;
+      el("mode").textContent = f.mode;
+      el("mode").className = "mode " + f.mode;
+      el("forward").textContent = f.forward.toFixed(2);
+      el("turn").textContent = (f.turn >= 0 ? "+" : "") + f.turn.toFixed(2);
+      el("simtime").textContent = f.sim_time.toFixed(1) + " s";
+      el("ratio").textContent = f.ratio.toFixed(2) + "×";
+      el("spikes").textContent = f.spiking;
+      el("wscale").textContent = f.weight_scale.toFixed(2);
+      for (const [key, row] of Object.entries(rows)) {
+        const hz = f.rates[key] || 0;
+        row.fill.style.width = Math.min(100, (100 * hz) / row.max) + "%";
+        row.value.textContent = hz.toFixed(hz < 10 ? 2 : 0);
+      }
+    };
+  }
+  connect();
+})();
+</script>
+</body>
+</html>

@@ -73,6 +73,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="stubs on every stage: no hardware, no MuJoCo, no microphone",
     )
+    r.add_argument(
+        "--viewer",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="serve the brain activity heat map (default: config brain.viewer)",
+    )
     r.add_argument("--log-level", default="INFO")
     return p
 
@@ -107,7 +113,14 @@ def build_stages(
         # imported lazily: torch and the connectome are a heavy optional extra
         from neurofly16px.behavior.brain import BrainBehavior
 
-        behavior = BrainBehavior(cfg.brain)
+        brain_cfg = cfg.brain
+        if args.viewer is not None:
+            brain_cfg = dataclasses.replace(brain_cfg, viewer=args.viewer)
+        if brain_cfg.viewer:
+            log.info(
+                "brain viewer at http://%s:%d", brain_cfg.viewer_host, brain_cfg.viewer_port
+            )
+        behavior = BrainBehavior(brain_cfg)
     elif args.behavior == "fsm":
         behavior = FsmBehavior(cfg.fsm, wander=WanderBehavior(cfg.wander))
     elif args.behavior == "wander":

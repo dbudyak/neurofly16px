@@ -54,3 +54,13 @@ day_brightness = 60    # restored in the morning; keep in step with ditoo.bright
 # What she does when no audio arrives at all (no mic, or it died).
 forward = 0.5
 turn_amount = 0.35
+
+[brain]
+# Phase 6: --behavior brain. Needs data/banc_v888.npz and data/populations.json
+# (scripts/fetch_banc.sh, scripts/build_anatomy.py, scripts/build_connectome.py).
+device = "cuda"
+viewer = true          # http://127.0.0.1:8765 while the brain runs
+viewer_port = 8765
+window_ms = 20.0
+giant_fibre_hz = 60.0  # escape threshold on DNp01
+drive_hz = 2.0         # mean descending rate that means "full speed"

@@ -93,6 +93,16 @@ def brain_loop(cfg: BrainConfig, audio_q: mp.Queue, out_q: mp.Queue, stop: mp.Ev
     drawn = bins >= 0
     bin_index = bins.clamp(min=0)
 
+    viewer = None
+    if cfg.viewer:
+        from neurofly16px.viewer.server import ViewerServer
+
+        viewer = ViewerServer(cfg.viewer_host, cfg.viewer_port)
+        viewer.start()
+    viewer_every = max(1, round(1000 / cfg.window_ms / max(cfg.viewer_hz, 0.1)))
+    window_count = 0
+    ceiling = 1
+
     stimulus = JohnstonStimulus(cfg)
     readout = DescendingReadout(cfg)
     steps_per_window = max(1, round(cfg.window_ms / cfg.dt_ms))
@@ -125,13 +135,34 @@ def brain_loop(cfg: BrainConfig, audio_q: mp.Queue, out_q: mp.Queue, stop: mp.Ev
         # Hold times (escape, idle) are wall-clock: they shape what happens on the
         # desk, and the brain's own clock runs at a fraction of real time.
         command = readout.update(rates, time.monotonic())
+        heat_image = heat.reshape(HEAT_HEIGHT, HEAT_WIDTH).cpu().numpy()
+
+        window_count += 1
+        if viewer is not None and window_count % viewer_every == 0:
+            flat = heat_image.ravel()
+            # A slowly falling ceiling keeps the colours steady between bursts.
+            ceiling = max(int(flat.max()), 1, int(ceiling * 0.9))
+            viewer.publish(
+                {
+                    "heat": flat.astype(int).tolist(),
+                    "ceiling": ceiling,
+                    "rates": {k: round(v, 3) for k, v in rates.items()},
+                    "mode": command.mode,
+                    "forward": round(command.forward, 3),
+                    "turn": round(command.turn, 3),
+                    "sim_time": round(sim_time, 2),
+                    "ratio": round(sim_time / max(time.monotonic() - started, 1e-9), 3),
+                    "spiking": int(fired.sum()),
+                    "weight_scale": round(brain.weight_scale, 4),
+                }
+            )
         _publish(
             out_q,
             BrainActivity(
                 t=sim_time,
                 command=command,
                 rates_hz=rates,
-                heat=heat.reshape(HEAT_HEIGHT, HEAT_WIDTH).cpu().numpy(),
+                heat=heat_image,
                 steps=brain.steps,
                 sim_time_s=sim_time,
                 wall_time_s=time.monotonic() - started,
