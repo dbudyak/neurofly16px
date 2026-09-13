@@ -54,10 +54,12 @@ def test_stream_parameters_and_lifecycle() -> None:
 def test_callback_publishes_features() -> None:
     mic, _ = make()
     mic.start()
-    block = np.full((320, 2), 0.3, np.float32)
-    mic._callback(block, 320, None, None)
-    f = mic.latest()
-    assert f.t == 1.0 and f.rms > 0.0 and mic.blocks == 1
+    quiet = np.full((320, 2), 0.003, np.float32)
+    mic._callback(quiet, 320, None, None)
+    assert mic.latest().t == 1.0 and mic.blocks == 1
+    assert mic.latest().rms == 0.0, "the first block is the room, not a sound"
+    mic._callback(np.full((320, 2), 0.3, np.float32), 320, None, None)
+    assert mic.latest().rms > 0.5 and mic.blocks == 2
 
 
 def test_callback_counts_status_flags() -> None:

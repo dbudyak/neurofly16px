@@ -38,8 +38,9 @@ def test_command_shape() -> None:
 
 
 def test_reads_blocks_and_publishes_features() -> None:
-    tone = (0.3 * np.ones((320 * 4, 2))).astype(np.float32).tobytes()
-    proc = FakeProc(tone)
+    quiet = 0.003 * np.ones((320 * 2, 2), np.float32)
+    loud = 0.3 * np.ones((320 * 2, 2), np.float32)
+    proc = FakeProc(np.concatenate([quiet, loud]).astype(np.float32).tobytes())
     mic = PipeWireAudio(CFG, spawn=lambda cmd: proc, clock=lambda: 2.0)
     assert mic.latest() == SILENCE
     mic.start()
@@ -49,7 +50,7 @@ def test_reads_blocks_and_publishes_features() -> None:
         time.sleep(0.005)
     mic.stop()
     assert mic.blocks == 4 and proc.terminated
-    assert mic.latest().t == 2.0 and mic.latest().rms > 0.0
+    assert mic.latest().t == 2.0 and mic.latest().rms > 0.5
 
 
 def test_stop_without_start_is_safe() -> None:
