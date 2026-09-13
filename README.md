@@ -112,7 +112,7 @@ equivalent, written but untested — this host runs systemd.
 
 ## Status
 
-Phases 0–5 done; Phase 4's thresholds still want one calibration session.
+Phases 0–6 running end to end; Phase 4's thresholds still want one calibration session.
 
 - **Phase 0** (host verification): both `uv` environments exist, the pretrained
   walking policy is exported to numpy and reproduces TensorFlow to 3e-6, the fly
@@ -153,6 +153,18 @@ Phases 0–5 done; Phase 4's thresholds still want one calibration session.
 - **Phase 5** (polish and service): `neurofly.toml` with discovery, a systemd
   user service, `--dry-run`, `--record`, the no-microphone random walk and night
   mode. See "Running it" above.
+- **Phase 6** (connectome brain): `--behavior brain` replaces the state machine
+  with a spiking model of the whole central nervous system — 144,047 neurons and
+  1,440,835 synaptic connections from BANC v888, leaky integrate-and-fire on the
+  GPU at 0.1 ms steps. Sound drives the Johnston's-organ neurons, activity
+  propagates through the real wiring, and the descending neurons steer the body:
+
+      uv run neurofly run --audio demo --behavior brain --sim flybody --viewer
+
+  `--viewer` serves a live soma heat map at http://127.0.0.1:8765. The model
+  runs at ~0.25x real time on an RTX 3090; the body keeps its own clock and the
+  lag is logged. Data, measurements and the design decisions are in
+  `docs/banc.md`.
 
 [PLAN.md](PLAN.md) is the roadmap; `docs/plan-assessment.md` lists the decisions
 taken and the ones awaiting the owner; `docs/plans/` holds the executable plans

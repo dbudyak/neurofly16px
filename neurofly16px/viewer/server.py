@@ -77,11 +77,26 @@ class ViewerServer:
             self._clients.discard(websocket)
 
     def _http(self, connection, request):
-        """Serve the page itself on a plain GET, so one port is enough."""
+        """Serve the page itself on a plain GET, so one port is enough.
+
+        Built by hand rather than through `connection.respond`, which labels the
+        body `text/plain` and makes the browser show the markup instead of the page.
+        """
+        del connection
         if request.headers.get("Upgrade", "").lower() == "websocket":
             return None
+        from websockets.datastructures import Headers
+        from websockets.http11 import Response
+
         body = PAGE.read_bytes()
-        return connection.respond(200, body.decode())
+        headers = Headers(
+            {
+                "Content-Type": "text/html; charset=utf-8",
+                "Content-Length": str(len(body)),
+                "Cache-Control": "no-store",
+            }
+        )
+        return Response(200, "OK", headers, body)
 
     def _broadcast(self, payload: str) -> None:
         """Runs on the server loop, so sends are scheduled, never awaited here."""
