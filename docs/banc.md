@@ -16,9 +16,11 @@ Verified 2026-09-12. `file:line` references point into clones of
   threshold on pre→post pairs (the unfiltered v2 edgelist has 11.5 M pairs);
   confirm the threshold from the downloaded file's minimum `syn_count`.
 - Harvard Dataverse doi:10.7910/DVN/7WTH1N (version 3.0, CC BY 4.0).
-  Anonymous downloads return HTTP 403; the dataset has `fileAccessRequest:
-  true`, so a Dataverse account and an access request are needed. Files we
-  care about (API listing, 2026-09-12):
+  ~~Anonymous downloads return HTTP 403; the dataset has `fileAccessRequest:
+  true`, so a Dataverse account and an access request are needed.~~
+  **Wrong — corrected 2026-09-13:** the files we need report
+  `restricted: false` and download anonymously; see "Wiring" below for the
+  one-line `curl`. Files we care about (API listing, 2026-09-12):
 
   | path | rows × cols | size | file id |
   |---|---|---|---|
@@ -165,16 +167,16 @@ drive; absolute rates are not meaningful, differences between conditions are.
   time from body time and logs the ratio.
 - Delay ring buffer: `t_dly / dt = 18` slots; refractory = 22 steps.
 
-## Confirm on the host (Phase 6.0)
+## Confirmed on the host (Phase 6.0) — all three answered below
 
-1. Codex export file names and columns for v888, or Dataverse access
-   approval; minimum `syn_count` in the connection table.
-2. JO-A..F counts per side from the metadata parquet; DN counts by
-   `super_cluster` after joining with the connection table (some DNs may
-   lack edges).
-3. Soma-position column and units (`position` is voxel xyz as a string in the
-   CSVs; `root_position_nm` exists too); choose the 2-D projection for the
-   heat map after plotting once.
+1. ✅ Export file names, columns and threshold — "Wiring", below. No access
+   approval was needed, and the export is *not* pre-thresholded: 11,752,828
+   pairs with `count` from 1.
+2. ✅ JO-A..F counts and the DN clusters — "Host results", below. The labels
+   are in `cell_sub_class`, not `cell_class`.
+3. ✅ Soma positions come from `nucleus_position_nm` (present for 153,468 of
+   188,508 rows), parsed from `"x, y, z"` strings; the projection is x against
+   y, chosen by measurement rather than by eye — "Host results", below.
 
 ## Host results (2026-09-13, from the public tables)
 
