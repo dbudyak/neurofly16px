@@ -213,3 +213,40 @@ JO-F 187, other 21.
 19 um difference in x. So the map projects x against y, unflipped, which draws
 the fly head-up with the nerve cord below. Soma extent: x 83-921 um, y 39-1034
 um, z 1-315 um.
+
+## Wiring (2026-09-13) — the Dataverse files are NOT access-gated
+
+The note above ("anonymous downloads return HTTP 403 ... an access request is
+needed") is wrong for the files we need. `banc_888_edgelist_simple_v2.feather`
+(305 MB, id 13992792) has `restricted: false` and
+
+    curl -L -o data/banc/banc_888_edgelist_simple_v2.feather \
+        https://dataverse.harvard.edu/api/access/datafile/13992792
+
+downloads it anonymously via a signed S3 redirect. No Dataverse account, no
+Codex sign-in. The dataset page is
+`https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/7WTH1N`
+(the DOI itself resolves to the citation page, not the files).
+
+Schema: `pre`, `post` (root ids as strings), `count` (synapses), `norm`,
+`post_count`, `pre_count`. **11,752,828 pairs, `count` from 1 to 1,103** — so the
+export is *not* pre-thresholded at 5 as assumed; `min_synapses` is ours to choose.
+
+`scripts/build_connectome.py` with the default `min_synapses = 5`:
+
+| step | pairs |
+|---|---|
+| all pairs | 11,752,828 |
+| `count >= 5` | 1,614,479 (13.7 %) |
+| both endpoints among the 144,047 kept neurons | 1,514,402 (93.8 %) |
+| autapses dropped | −73,567 |
+| **CSR edges** | **1,440,835**, 40.3 % inhibitory, mean \|weight\| 12.3, densest row 2,814 |
+
+**Autapses are dropped by default** (`--keep-autapses` to keep them). They are
+larger than real edges (mean 16.2 synapses against 12.3), and for ~11k neurons
+the self-edge carries more than half the outgoing weight — segmentation
+artefacts. At `w_syn` 0.275 mV a 16-synapse autapse is 4.4 mV against the 7 mV
+threshold gap, i.e. a neuron would re-excite itself on its own spike.
+
+Output `data/banc_v888.npz`: `indptr` (n+1), `indices`, `weights`
+(sign x synapse count), `ids`, `min_synapses`, `autapses`. 5.3 MB compressed.
