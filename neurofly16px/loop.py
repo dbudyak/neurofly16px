@@ -11,6 +11,7 @@ from neurofly16px.audio.base import AudioSource
 from neurofly16px.behavior.base import Behavior
 from neurofly16px.config import LoopConfig
 from neurofly16px.device.base import Display
+from neurofly16px.record import Recorder
 from neurofly16px.render.base import Renderer
 from neurofly16px.sim.base import FlySim
 from neurofly16px.types import IDLE
@@ -36,6 +37,7 @@ def run(
     renderer: Renderer,
     display: Display,
     duration_s: float | None = None,
+    recorder: Recorder | None = None,
     clock: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
 ) -> LoopStats:
@@ -75,7 +77,10 @@ def run(
                     log.warning("sim cannot keep up: dropped %d steps so far", stats.dropped_steps)
                     last_lag_log = now
             if now >= next_frame:
-                display.show(renderer.render(fly))
+                frame = renderer.render(fly)
+                display.show(frame)
+                if recorder is not None:
+                    recorder.add(fly, cmd, frame)
                 stats.frames += 1
                 next_frame = now + frame_period
             wake = min(next_behavior, sim_time + dt, next_frame)

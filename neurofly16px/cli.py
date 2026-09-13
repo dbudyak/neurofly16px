@@ -18,6 +18,7 @@ from neurofly16px.config import Config, find_config, load_config
 from neurofly16px.device.ppm import PpmDisplay
 from neurofly16px.device.terminal import TerminalDisplay
 from neurofly16px.device.worker import DisplayWorker
+from neurofly16px.record import Recorder
 from neurofly16px.render.base import Renderer
 from neurofly16px.render.side import SideRenderer
 from neurofly16px.render.sprite import SpriteRenderer
@@ -57,6 +58,12 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--mac", default=None, help="Ditoo MAC (default: config ditoo.mac)")
     r.add_argument("--image-cmd", choices=("44", "49", "8b"), default=None)
     r.add_argument("--view", choices=VIEW, default=None, help="default: config render.view")
+    r.add_argument("--record", type=Path, default=None, help="write frames and states to an npz")
+    r.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="stubs on every stage: no hardware, no MuJoCo, no microphone",
+    )
     r.add_argument("--log-level", default="INFO")
     return p
 
@@ -138,8 +145,14 @@ def main(argv: list[str] | None = None) -> int:
     for stage in ("audio", "behavior", "sim", "device"):
         if getattr(args, stage) is None:
             setattr(args, stage, getattr(cfg.stages, stage))
+    if args.dry_run:
+        args.audio, args.behavior, args.sim = "stub", "scripted", "stub"
+        if args.device == "ditoo":
+            args.device = "terminal"
+        log.info("dry run: stub audio, scripted behaviour, stub sim, %s display", args.device)
     loop_cfg = cfg.loop if args.fps is None else dataclasses.replace(cfg.loop, fps=args.fps)
     audio, behavior, sim, renderer, display = build_stages(args, cfg)
+    recorder = Recorder() if args.record else None
     display.start()
     try:
         stats = loop.run(
@@ -150,10 +163,15 @@ def main(argv: list[str] | None = None) -> int:
             renderer=renderer,
             display=display,
             duration_s=args.seconds,
+            recorder=recorder,
         )
     except KeyboardInterrupt:
         log.info("interrupted")
+        if recorder is not None:
+            recorder.save(args.record)
         return 0
+    if recorder is not None:
+        recorder.save(args.record)
     log.info("stats: %s", stats)
     log.info(
         "display: %d shown, %d dropped by the worker%s",
