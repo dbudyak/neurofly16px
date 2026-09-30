@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "neurofly16px"
 version = "0.0.1"
-description = "A physically simulated fruit fly on a 16x16 LED display, reacting to sound."
+description = "A physically simulated fruit fly that reacts to sound, rendered at 16x16 pixels."
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "numpy==1.26.4",

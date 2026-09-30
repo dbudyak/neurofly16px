@@ -3,13 +3,13 @@
 
 [stages]
 # What `neurofly run` uses when the matching flag is absent.
-audio = "mic"          # stub | mic | pipewire | portaudio
-behavior = "fsm"       # scripted | fsm
+audio = "mic"          # stub | demo | mic | pipewire | portaudio
+behavior = "fsm"       # scripted | fsm | wander | brain
 sim = "flybody"        # stub | flybody
-device = "ditoo"       # terminal | ppm | ditoo
+device = "terminal"    # terminal | ppm | ditoo
 
 [loop]
-fps = 16               # measured smooth on the Ditoo
+fps = 16
 behavior_hz = 50
 
 [render]
@@ -19,6 +19,7 @@ height_cm = 2.0        # world height mapped across the 16 rows
 show_ground = true
 
 [ditoo]
+# Only used with device = "ditoo".
 mac = "XX:XX:XX:XX:XX:XX"
 channel = 0            # 0 = resolve the serial-port channel from SDP
 image_cmd = "44"
@@ -44,7 +45,8 @@ v_max_cm_s = 2.0
 w_max_rad_s = 2.0
 
 [night]
-enabled = true
+# Dark panel during set hours; meant for the Ditoo.
+enabled = false
 start = 23.0           # local hour the panel goes dark (the window may wrap midnight)
 end = 7.0
 brightness = 0
@@ -56,7 +58,7 @@ forward = 0.5
 turn_amount = 0.35
 
 [brain]
-# Phase 6: --behavior brain. Needs data/banc_v888.npz and data/populations.json
+# --behavior brain. Needs data/banc_v888.npz and data/populations.json
 # (scripts/fetch_banc.sh, scripts/build_anatomy.py, scripts/build_connectome.py).
 device = "cuda"
 viewer = true          # http://127.0.0.1:8765 while the brain runs
